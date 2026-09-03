@@ -246,12 +246,14 @@ function Field({
 export function Onboarding({
   authenticated,
   addingAccount = false,
+  demoMode,
   googleEnabled,
   initialError,
   initialName,
 }: {
   authenticated: boolean;
   addingAccount?: boolean;
+  demoMode: boolean;
   googleEnabled: boolean;
   initialError?: string;
   initialName?: string;
@@ -343,12 +345,20 @@ export function Onboarding({
       const address = accountEmail.trim().toLowerCase();
       setBusy(true);
       if (!authenticated) {
-        const demo = await fetch("/api/auth/demo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: address, password, name: address.split("@")[0] }),
-        });
-        if (!demo.ok) {
+        let authenticatedAccount = false;
+        if (demoMode) {
+          const demo = await fetch("/api/auth/demo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: address,
+              password,
+              name: address.split("@")[0],
+            }),
+          });
+          authenticatedAccount = demo.ok;
+        }
+        if (!authenticatedAccount) {
           const created = await authClient.signUp.email({
             name: address.split("@")[0],
             email: address,
@@ -361,11 +371,15 @@ export function Onboarding({
             });
             if (signedIn.error) {
               setBusy(false);
+              const accountExists =
+                created.error.code === "USER_ALREADY_EXISTS" ||
+                created.error.code ===
+                  "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL" ||
+                created.error.message?.toLowerCase().includes("already exists");
               setError(
-                created.error.message ===
-                  "User already exists. Use another email."
-                  ? "This Remail account already exists. Sign in from the login screen."
-                  : "Unable to create your account. Use at least 8 characters for the password, then try again.",
+                accountExists
+                  ? "This Remail account already exists, but that password did not match. Sign in instead or use the original password."
+                  : created.error.message ?? "Unable to create your account.",
               );
               setInvalid(true);
               return;

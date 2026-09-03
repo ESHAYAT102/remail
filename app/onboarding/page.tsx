@@ -20,6 +20,7 @@ export default async function OnboardingPage({
     <Onboarding
       authenticated={Boolean(user) && !addingAccount}
       addingAccount={addingAccount}
+      demoMode={isDemoMode()}
       googleEnabled={googleEnabled}
       initialName={addingAccount ? undefined : user?.name}
       initialError={

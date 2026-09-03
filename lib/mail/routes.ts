@@ -132,7 +132,12 @@ export function mailRouteFromPathname(pathname: string): MailPathRoute | null {
 
   if (segments[1] === "settings") {
     const rawSection = segments[2] ?? "account";
-    const section = rawSection === "accounts" ? "account" : rawSection;
+    const section =
+      rawSection === "accounts" ||
+      rawSection === "domain" ||
+      rawSection === "domains"
+        ? "account"
+        : rawSection;
     if (
       segments.length <= 3 &&
       (mailSettingsSectionIds as readonly string[]).includes(section)
