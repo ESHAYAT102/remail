@@ -1,0 +1,2 @@
+Defaults!/usr/local/sbin/redakt-stalwart-deploy env_keep += "SSH_ORIGINAL_COMMAND"
+ubuntu ALL=(root) NOPASSWD: /usr/local/sbin/redakt-stalwart-deploy

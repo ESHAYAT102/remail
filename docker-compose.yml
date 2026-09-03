@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: redakt
+      POSTGRES_PASSWORD: redakt
+      POSTGRES_DB: redakt
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U redakt"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  stalwart:
+    image: stalwartlabs/stalwart:latest
+    hostname: mail.redakt.local
+    environment:
+      STALWART_PUBLIC_URL: http://localhost:8080
+      STALWART_RECOVERY_ADMIN: ${STALWART_ADMIN_USER:-admin}:${STALWART_ADMIN_SECRET:-changeme}
+    ports:
+      - "25:25"
+      - "465:465"
+      - "993:993"
+      - "8080:8080"
+    volumes:
+      - stalwart-data:/opt/stalwart
+
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      DEMO_MODE: "false"
+      DATABASE_URL: postgres://redakt:redakt@postgres:5432/redakt
+      BETTER_AUTH_SECRET: replace-me-in-production-with-a-long-secret
+      BETTER_AUTH_URL: http://localhost:3000
+      STALWART_URL: http://stalwart:8080
+      STALWART_ADMIN_USER: admin
+      STALWART_ADMIN_SECRET: changeme
+      MAIL_HOSTNAME: mail.example.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  stalwart-data:

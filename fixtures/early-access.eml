@@ -1,0 +1,15 @@
+From: Remail <hello@remail.dev>
+To: Ada Meridian <ada@redakt.local>
+Subject: Get early access to Remail
+Date: Mon, 31 Aug 2026 02:56:00 -0400
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html>
+  <body>
+    <p>You asked for a quieter mail client.</p>
+    <p>Remail is a work inbox for your custom domain, with sending and domain-wide receiving powered by Resend.</p>
+    <p>Open <a href="https://github.com">the repo</a> when you want to self-host.</p>
+    <p style="margin-top: 24px; color: #8A8A8A; font-size: 12px;">Sent from Remail</p>
+  </body>
+</html>

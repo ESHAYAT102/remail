@@ -1,0 +1,338 @@
+@import "@fontsource-variable/inter";
+
+:root {
+  /* Catppuccin Latte */
+  --color-1: #4c4f69;
+  --color-2: #5c5f77;
+  --color-3: #6c6f85;
+  --color-4: #7c7f93;
+  --color-5: #9ca0b0;
+  --color-6: #ccd0da;
+  --color-7: #dce0e8;
+  --color-8: #e6e9ef;
+  --color-9: #eff1f5;
+  --overlay-hover: color-mix(in oklch, var(--color-1) 5%, transparent);
+  --overlay-active: color-mix(in oklch, var(--color-1) 8%, transparent);
+  --accent: #8839ef;
+  --accent-text: #6f1fd1;
+  --accent-on-solid: #eff1f5;
+  --folder-category-neutral: #8c8fa1;
+  --folder-category-rose: #d20f39;
+  --folder-category-amber: #df8e1d;
+  --folder-category-green: #40a02b;
+  --folder-category-blue: #1e66f5;
+  --folder-category-violet: #8839ef;
+  --positive-text: #287d16;
+  --positive-soft: #dcebd8;
+  --positive-glow: rgb(64 160 43 / 0.3);
+  --danger-text: #d20f39;
+  --danger-solid: #d20f39;
+  --danger-solid-hover: #b80d32;
+  --danger-on-solid: #eff1f5;
+  --focus-ring: var(--accent);
+  /* Cast is the shadow ink; ring is the hairline that replaces a 1px border. */
+  --cast-2: oklch(0.141 0 0 / 0.02);
+  --cast-4: oklch(0.141 0 0 / 0.04);
+  --cast-6: oklch(0.141 0 0 / 0.06);
+  --cast-8: oklch(0.141 0 0 / 0.08);
+  --ring: 0 0 0 0.75px var(--cast-4);
+  /* Light rakes across the top of a raised surface. */
+  --sheen: oklch(1 0 0 / 0.6);
+  --sheen-soft: oklch(1 0 0 / 0.32);
+  --sheen-edge: oklch(1 0 0 / 0.5);
+
+  --elevation-1:
+    var(--ring),
+    0 0.5px 0.5px var(--cast-4),
+    0 1px 3px var(--cast-4);
+  /* Ringless on purpose: the pane's edge is where tabs merge into it, and a
+     hairline there would draw a seam straight through the join. */
+  --elevation-2:
+    0 0.5px 0.5px var(--cast-6),
+    0 1px 3px var(--cast-4),
+    0 0 6px var(--cast-8);
+  /* The inset sheen is what reads as depth on dark, where cast shadows vanish.
+     On light it lands white-on-white and costs nothing. */
+  --elevation-3:
+    inset 0 0.75px 0 var(--sheen-edge),
+    var(--ring),
+    0 6px 32px var(--cast-4),
+    0 40px 56px -32px var(--cast-2);
+  --elevation-4:
+    inset 0 0.75px 0 var(--sheen-edge),
+    var(--ring),
+    0 4px 12px var(--cast-2),
+    0 8px 24px var(--cast-2),
+    0 16px 32px var(--cast-4),
+    0 32px 48px var(--cast-2);
+  --lift:
+    inset 0 0.75px 0.75px var(--sheen-edge),
+    inset 0 5px 6px var(--sheen-soft),
+    var(--ring),
+    0 0.5px 0.5px var(--cast-4),
+    0 4px 6px -3px var(--cast-4);
+  --lift-accent:
+    inset 0 1.25px 0 oklch(1 0 0 / 0.58),
+    inset 0 1px 1px color-mix(in oklch, white 72%, var(--accent)),
+    inset 0 8px 12px oklch(1 0 0 / 0.28),
+    inset 0 -8px 12px color-mix(in oklch, var(--accent) 45%, oklch(0 0 0 / 0.22)),
+    0 0 0 0.75px color-mix(in oklch, var(--accent) 40%, var(--cast-6)),
+    0 0.5px 0.5px color-mix(in oklch, var(--accent) 22%, var(--cast-4)),
+    0 4px 6px -3px color-mix(in oklch, var(--accent) 18%, var(--cast-4));
+  /* The highlight falls off over a fixed distance, not a percentage, so a
+     dialog gets the same top edge a 32px button does instead of a wash down
+     its whole height. Longer than a control is tall, so on small surfaces it
+     reads as a gentle rake rather than a band that stops mid-element. */
+  --raised: linear-gradient(var(--sheen-soft) 0, transparent 56px), linear-gradient(var(--sheen) 0, var(--sheen) 100%);
+  --raised-accent:
+    linear-gradient(oklch(1 0 0 / 0.4) 0, transparent 40px),
+    linear-gradient(oklch(1 0 0 / 0.16) 0, oklch(1 0 0 / 0.03) 100%);
+  --recommended-raised:
+    radial-gradient(90% 120% at 50% 125%, var(--positive-glow) 0%, transparent 68%),
+    var(--raised);
+
+  --shadow-border: var(--elevation-1);
+  --shadow-border-hover: var(--elevation-2);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --color-1: #cdd6f4;
+    --color-2: #bac2de;
+    --color-3: #a6adc8;
+    --color-4: #9399b2;
+    --color-5: #585b70;
+    --color-6: #45475a;
+    --color-7: #313244;
+    --color-8: #181825;
+    --color-9: #1e1e2e;
+    --accent: #cba6f7;
+    --accent-text: #cba6f7;
+    --accent-on-solid: #1e1e2e;
+    --folder-category-neutral: #7f849c;
+    --folder-category-rose: #f38ba8;
+    --folder-category-amber: #f9e2af;
+    --folder-category-green: #a6e3a1;
+    --folder-category-blue: #89b4fa;
+    --folder-category-violet: #cba6f7;
+    --positive-text: #a6e3a1;
+    --positive-soft: #26352c;
+    --positive-glow: rgb(166 227 161 / 0.2);
+    --danger-text: #f38ba8;
+    --danger-solid: #f38ba8;
+    --danger-solid-hover: #eba0ac;
+    --danger-on-solid: #1e1e2e;
+    --overlay-hover: color-mix(in oklch, var(--color-1) 5%, transparent);
+    --overlay-active: color-mix(in oklch, var(--color-1) 8%, transparent);
+
+    /* On dark the cast reads as depth only when it is near-black; the ring and
+       sheen carry the edge that shadow cannot. */
+    --cast-2: oklch(0 0 0 / 0.16);
+    --cast-4: oklch(0 0 0 / 0.24);
+    --cast-6: oklch(0 0 0 / 0.32);
+    --cast-8: oklch(0 0 0 / 0.4);
+    --ring: 0 0 0 0.75px oklch(1 0 0 / 0.08);
+    --sheen: oklch(1 0 0 / 0.05);
+    --sheen-soft: oklch(1 0 0 / 0.04);
+    --sheen-edge: oklch(1 0 0 / 0.08);
+    --lift-accent:
+      inset 0 1px 0 oklch(1 0 0 / 0.32),
+      inset 0 0.75px 0.75px color-mix(in oklch, white 42%, var(--accent)),
+      inset 0 5px 7px oklch(1 0 0 / 0.1),
+      inset 0 -5px 8px oklch(0 0 0 / 0.2),
+      0 0 0 0.75px color-mix(in oklch, var(--accent) 26%, oklch(1 0 0 / 0.08)),
+      0 0.5px 0.5px var(--cast-4),
+      0 4px 6px -3px var(--cast-4);
+    --raised-accent:
+      linear-gradient(oklch(1 0 0 / 0.2) 0, transparent 40px),
+      linear-gradient(oklch(1 0 0 / 0.08) 0, oklch(1 0 0 / 0.02) 100%);
+  }
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-1: #cdd6f4;
+  --color-2: #bac2de;
+  --color-3: #a6adc8;
+  --color-4: #9399b2;
+  --color-5: #585b70;
+  --color-6: #45475a;
+  --color-7: #313244;
+  --color-8: #181825;
+  --color-9: #1e1e2e;
+  --accent: #cba6f7;
+  --accent-text: #cba6f7;
+  --accent-on-solid: #1e1e2e;
+  --folder-category-neutral: #7f849c;
+  --folder-category-rose: #f38ba8;
+  --folder-category-amber: #f9e2af;
+  --folder-category-green: #a6e3a1;
+  --folder-category-blue: #89b4fa;
+  --folder-category-violet: #cba6f7;
+  --positive-text: #a6e3a1;
+  --positive-soft: #26352c;
+  --positive-glow: rgb(166 227 161 / 0.2);
+  --danger-text: #f38ba8;
+  --danger-solid: #f38ba8;
+  --danger-solid-hover: #eba0ac;
+  --danger-on-solid: #1e1e2e;
+  --overlay-hover: color-mix(in oklch, var(--color-1) 5%, transparent);
+  --overlay-active: color-mix(in oklch, var(--color-1) 8%, transparent);
+  --cast-2: oklch(0 0 0 / 0.16);
+  --cast-4: oklch(0 0 0 / 0.24);
+  --cast-6: oklch(0 0 0 / 0.32);
+  --cast-8: oklch(0 0 0 / 0.4);
+  --ring: 0 0 0 0.75px oklch(1 0 0 / 0.08);
+  --sheen: oklch(1 0 0 / 0.05);
+  --sheen-soft: oklch(1 0 0 / 0.04);
+  --sheen-edge: oklch(1 0 0 / 0.08);
+  --lift-accent:
+    inset 0 1px 0 oklch(1 0 0 / 0.32),
+    inset 0 0.75px 0.75px color-mix(in oklch, white 42%, var(--accent)),
+    inset 0 5px 7px oklch(1 0 0 / 0.1),
+    inset 0 -5px 8px oklch(0 0 0 / 0.2),
+    0 0 0 0.75px color-mix(in oklch, var(--accent) 26%, oklch(1 0 0 / 0.08)),
+    0 0.5px 0.5px var(--cast-4),
+    0 4px 6px -3px var(--cast-4);
+  --raised-accent:
+    linear-gradient(oklch(1 0 0 / 0.2) 0, transparent 40px),
+    linear-gradient(oklch(1 0 0 / 0.08) 0, oklch(1 0 0 / 0.02) 100%);
+}
+
+@layer resets {
+  * {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+  }
+}
+
+@stylex;
+
+html,
+body {
+  height: 100%;
+}
+
+html {
+  font-size: 81.25%;
+}
+
+body {
+  background: var(--color-8);
+  color: var(--color-1);
+  font-family: "Inter Variable", "Inter", "Avenir Next", ui-sans-serif, system-ui,
+    sans-serif;
+  font-size: 1rem;
+  font-weight: 450;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring) !important;
+  outline-offset: 2px;
+}
+
+/* The spec has :focus-visible match text fields on click, which rings the
+   composer every time it is clicked. Drop it while the last interaction was a
+   pointer; any focus-moving key restores it. Showing the ring is the default,
+   so if the modality script never runs nobody loses their focus indicator. */
+@media not (forced-colors: active) {
+  [data-modality="pointer"] :focus-visible {
+    outline: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :focus-visible {
+    outline-color: Highlight !important;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  inset-inline-start: -999px;
+  top: 16px;
+  z-index: 10;
+  padding: 8px 12px;
+  background: var(--color-9);
+  color: var(--color-1);
+  border-radius: 8px;
+}
+
+.skip-link:focus {
+  inset-inline-start: 16px;
+  top: 16px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The mail layout paints its shell before request-bound account data arrives.
+   Once the real shell is a direct child of the page, it takes over without a
+   frame where both surfaces are visible. */
+body:has(> [data-mail-shell]) > [data-mail-shell-loading] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+::selection {
+  background: color-mix(in oklch, var(--accent) 28%, var(--color-9));
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-6);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.duo-icons {
+  flex-shrink: 0;
+  display: block;
+}
+
+.duo-icons-primary-layer {
+  fill: currentColor;
+}
+
+.duo-icons-secondary-layer {
+  fill: currentColor;
+  opacity: 0.32;
+}

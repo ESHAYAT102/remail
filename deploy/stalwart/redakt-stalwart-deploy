@@ -1,0 +1,245 @@
+#!/usr/bin/env bash
+
+set -Eeuo pipefail
+
+readonly PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+readonly DEPLOY_DIR=/opt/redakt/stalwart
+readonly COMPOSE_FILE="$DEPLOY_DIR/compose.production.yml"
+readonly ENV_FILE="$DEPLOY_DIR/stalwart.env"
+readonly BACKUP_ROOT="$DEPLOY_DIR/backups"
+readonly BACKUP_IMAGE=alpine:3.20
+
+compose() {
+  docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+require_deployment_files() {
+  [[ -f "$COMPOSE_FILE" ]] || fail "missing $COMPOSE_FILE"
+  [[ -f "$ENV_FILE" ]] || fail "missing $ENV_FILE"
+}
+
+container_id() {
+  compose ps -q stalwart
+}
+
+container_health() {
+  local id="$1"
+  docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$id"
+}
+
+report_status() {
+  local id image image_id health recent_logs recent_dane_dnssec_errors
+
+  require_deployment_files
+  id="$(container_id)"
+  [[ -n "$id" ]] || fail "Stalwart is not running"
+
+  image="$(docker inspect --format '{{.Config.Image}}' "$id")"
+  image_id="$(docker inspect --format '{{.Image}}' "$id")"
+  health="$(container_health "$id")"
+  recent_logs="$(compose logs --no-color --since 15m stalwart 2>&1)" ||
+    fail "could not inspect recent Stalwart logs"
+  recent_dane_dnssec_errors="$(
+    awk '/dane\.bogus-dnssec-record/ { count += 1 } END { print count + 0 }' \
+      <<<"$recent_logs"
+  )"
+
+  printf 'container=%s\nimage=%s\nimage_id=%s\nhealth=%s\nrecent_dane_dnssec_errors_15m=%s\n' \
+    "$id" "$image" "$image_id" "$health" "$recent_dane_dnssec_errors"
+  [[ "$health" == healthy ]] || fail "Stalwart health is $health"
+  [[ "$recent_dane_dnssec_errors" == 0 ]] ||
+    fail "Stalwart logged $recent_dane_dnssec_errors bogus DNSSEC error(s) in the last 15 minutes"
+}
+
+validate_target_image() {
+  local image="$1"
+  [[ "$image" =~ ^stalwartlabs/stalwart:v0\.16(\.[0-9]+)?(@sha256:[a-f0-9]{64})?$ ]] ||
+    fail "image must be a Stalwart v0.16 tag or pinned v0.16 digest"
+}
+
+set_image_in_env() {
+  local image="$1" temporary
+  temporary="$(mktemp "$DEPLOY_DIR/.stalwart.env.XXXXXX")"
+
+  awk -v image="$image" '
+    BEGIN { replaced = 0 }
+    /^STALWART_IMAGE=/ {
+      print "STALWART_IMAGE=" image
+      replaced = 1
+      next
+    }
+    { print }
+    END {
+      if (!replaced) {
+        print "STALWART_IMAGE=" image
+      }
+    }
+  ' "$ENV_FILE" >"$temporary"
+
+  install -o root -g docker -m 0640 "$temporary" "$ENV_FILE"
+  rm -f "$temporary"
+}
+
+volume_for_destination() {
+  local id="$1" destination="$2" volume
+  volume="$(docker inspect --format \
+    "{{range .Mounts}}{{if eq .Destination \"$destination\"}}{{.Name}}{{end}}{{end}}" \
+    "$id")"
+  [[ "$volume" =~ ^[A-Za-z0-9_.-]+$ ]] ||
+    fail "could not resolve the named volume mounted at $destination"
+  printf '%s\n' "$volume"
+}
+
+wait_until_healthy() {
+  local attempt id health
+  for attempt in $(seq 1 60); do
+    id="$(container_id)"
+    if [[ -n "$id" ]]; then
+      health="$(container_health "$id")"
+      if [[ "$health" == healthy ]]; then
+        printf 'Stalwart became healthy after %s check(s).\n' "$attempt"
+        return 0
+      fi
+      printf 'Waiting for Stalwart health: %s (%s/60)\n' "$health" "$attempt"
+    else
+      printf 'Waiting for the Stalwart container (%s/60)\n' "$attempt"
+    fi
+    sleep 5
+  done
+  return 1
+}
+
+update_stalwart() {
+  local target="$1"
+  local id current_image current_id target_id timestamp backup_dir
+  local etc_volume data_volume rollback_tag update_started=0
+
+  require_deployment_files
+  validate_target_image "$target"
+
+  exec 9>/run/lock/redakt-stalwart-deploy.lock
+  flock -n 9 || fail "another Stalwart operation is already running"
+
+  id="$(container_id)"
+  [[ -n "$id" ]] || fail "Stalwart is not running"
+  current_image="$(docker inspect --format '{{.Config.Image}}' "$id")"
+  current_id="$(docker inspect --format '{{.Image}}' "$id")"
+  etc_volume="$(volume_for_destination "$id" /etc/stalwart)"
+  data_volume="$(volume_for_destination "$id" /var/lib/stalwart)"
+
+  printf 'Pulling the requested image before downtime: %s\n' "$target"
+  docker pull "$target"
+  docker pull "$BACKUP_IMAGE"
+  target_id="$(docker image inspect --format '{{.Id}}' "$target")"
+
+  if [[ "$target_id" == "$current_id" ]]; then
+    printf 'Stalwart already runs the requested image (%s). No update needed.\n' "$target_id"
+    report_status
+    return 0
+  fi
+
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  backup_dir="$BACKUP_ROOT/$timestamp"
+  rollback_tag="redakt/stalwart-rollback:$timestamp"
+  install -d -o root -g docker -m 0750 "$backup_dir"
+  docker image tag "$current_id" "$rollback_tag"
+
+  {
+    printf 'created_at=%s\n' "$timestamp"
+    printf 'previous_image=%s\n' "$current_image"
+    printf 'previous_image_id=%s\n' "$current_id"
+    printf 'rollback_image=%s\n' "$rollback_tag"
+    printf 'target_image=%s\n' "$target"
+    printf 'target_image_id=%s\n' "$target_id"
+    printf 'etc_volume=%s\n' "$etc_volume"
+    printf 'data_volume=%s\n' "$data_volume"
+  } >"$backup_dir/metadata.txt"
+  chmod 0640 "$backup_dir/metadata.txt"
+  chown root:docker "$backup_dir/metadata.txt"
+
+  rollback_with_code() {
+    local exit_code="$1"
+    trap - ERR HUP INT TERM
+    if [[ "$update_started" == 1 ]]; then
+      printf 'Update failed; restarting the previous image %s.\n' "$rollback_tag" >&2
+      set_image_in_env "$rollback_tag"
+      compose up -d || true
+      wait_until_healthy || true
+      compose logs --no-color --tail 200 stalwart >&2 || true
+      printf 'Backup retained at %s. Data volumes were not automatically restored.\n' "$backup_dir" >&2
+    fi
+    exit "$exit_code"
+  }
+
+  rollback() {
+    rollback_with_code "$?"
+  }
+
+  interrupted() {
+    local signal="$1"
+    printf 'Update interrupted by %s.\n' "$signal" >&2
+    rollback_with_code 130
+  }
+
+  trap rollback ERR
+  trap 'interrupted HUP' HUP
+  trap 'interrupted INT' INT
+  trap 'interrupted TERM' TERM
+
+  update_started=1
+  printf 'Stopping Stalwart for a consistent volume backup.\n'
+  compose stop -t 120 stalwart
+
+  docker run --rm --network none \
+    -v "${etc_volume}:/source:ro" \
+    -v "${backup_dir}:/backup" \
+    "$BACKUP_IMAGE" \
+    tar -C /source -czf /backup/stalwart-etc.tar.gz .
+  docker run --rm --network none \
+    -v "${data_volume}:/source:ro" \
+    -v "${backup_dir}:/backup" \
+    "$BACKUP_IMAGE" \
+    tar -C /source -czf /backup/stalwart-data.tar.gz .
+
+  tar -tzf "$backup_dir/stalwart-etc.tar.gz" >/dev/null
+  tar -tzf "$backup_dir/stalwart-data.tar.gz" >/dev/null
+  chmod 0640 "$backup_dir"/*.tar.gz
+  chown root:docker "$backup_dir"/*.tar.gz
+
+  set_image_in_env "$target"
+  compose up -d
+  wait_until_healthy
+
+  update_started=0
+  trap - ERR HUP INT TERM
+  printf 'Stalwart update completed. Backup: %s; rollback image: %s\n' \
+    "$backup_dir" "$rollback_tag"
+  report_status
+}
+
+main() {
+  local requested
+  requested="${SSH_ORIGINAL_COMMAND:-}"
+  if [[ -z "$requested" && $# -gt 0 ]]; then
+    requested="$*"
+  fi
+
+  case "$requested" in
+    stalwart-check)
+      report_status
+      ;;
+    'stalwart-update '*)
+      update_stalwart "${requested#stalwart-update }"
+      ;;
+    *)
+      fail "unsupported operation; use stalwart-check or stalwart-update <image>"
+      ;;
+  esac
+}
+
+main "$@"

@@ -1,0 +1,69 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1788284117887,
+      "tag": "0000_modern_vance_astro",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788324700691,
+      "tag": "0001_fair_wallflower",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788377661020,
+      "tag": "0002_first_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788384192061,
+      "tag": "0003_nappy_machine_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788385783444,
+      "tag": "0004_far_mathemanic",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1788404309881,
+      "tag": "0005_cool_trauma",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788464944642,
+      "tag": "0006_naive_iron_monger",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1788465856380,
+      "tag": "0007_eminent_frank_castle",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788466332110,
+      "tag": "0008_sudden_edwin_jarvis",
+      "breakpoints": true
+    }
+  ]
+}

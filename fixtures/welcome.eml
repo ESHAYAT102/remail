@@ -1,0 +1,16 @@
+From: Remail <hello@remail.dev>
+To: Ada Meridian <ada@redakt.local>
+Subject: Welcome to your inbox
+Date: Mon, 31 Aug 2026 10:12:00 -0400
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<html>
+  <body>
+    <p>Ada —</p>
+    <p>This is your first mailbox. Remail receives every address at your custom domain through Resend.</p>
+    <p>Add a domain from the utility bar, copy the DNS records, and wait for the checks to turn green.</p>
+    <p>Until then, this demo inbox is yours to click through.</p>
+    <p style="margin-top: 24px; color: #8A8A8A; font-size: 12px;">Sent from Remail</p>
+  </body>
+</html>

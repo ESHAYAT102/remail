@@ -1,0 +1,1 @@
+ALTER TABLE "user_preferences" ADD COLUMN "include_redakt_footer" boolean DEFAULT true NOT NULL;

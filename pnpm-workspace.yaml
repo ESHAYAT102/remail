@@ -1,0 +1,8 @@
+allowBuilds:
+  '@railway/cli': true
+  esbuild: true
+  sharp: false
+  unrs-resolver: false
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@railway/cli@5.47.1'

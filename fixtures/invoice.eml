@@ -1,0 +1,24 @@
+From: Northline Studio <billing@northline.studio>
+To: Ada Meridian <ada@redakt.local>
+Subject: Invoice 1842 is ready
+Date: Sun, 30 Aug 2026 16:40:00 -0400
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="bound1842"
+
+--bound1842
+Content-Type: text/plain; charset=UTF-8
+
+Invoice 1842 for August retainers is attached conceptually. Pay whenever you like.
+
+--bound1842
+Content-Type: text/html; charset=UTF-8
+
+<html>
+  <body>
+    <p>Hi Ada,</p>
+    <p>Invoice <strong>1842</strong> for the August retainer is ready. Total due is $4,200 by September 14.</p>
+    <p>Reply here if the PO number changed.</p>
+    <p>— Northline billing</p>
+  </body>
+</html>
+--bound1842--

@@ -1,0 +1,1 @@
+CREATE INDEX "mail_accounts_connector_email_idx" ON "mail_accounts" USING btree ("connector","email");

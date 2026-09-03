@@ -1,0 +1,25 @@
+services:
+  stalwart:
+    image: ${STALWART_IMAGE:-stalwartlabs/stalwart:v0.16}
+    restart: unless-stopped
+    hostname: ${MAIL_HOSTNAME:?set MAIL_HOSTNAME}
+    environment:
+      STALWART_PUBLIC_URL: https://${MAIL_HOSTNAME:?set MAIL_HOSTNAME}
+    ports:
+      - "25:25"
+      - "443:443"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+    volumes:
+      - stalwart-etc:/etc/stalwart
+      - stalwart-data:/var/lib/stalwart
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  stalwart-etc:
+  stalwart-data:
