@@ -9,7 +9,7 @@ export function getGoogleSignInOptions({
   return {
     provider: GOOGLE_PROVIDER,
     callbackURL: "/mail/inbox",
-    newUserCallbackURL: "/mail/settings/account?welcome=google",
+    newUserCallbackURL: "/onboarding?auth=google",
     errorCallbackURL: addingAccount
       ? "/?add=account&auth=google"
       : "/?auth=google",
