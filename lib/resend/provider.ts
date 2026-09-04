@@ -156,7 +156,7 @@ export function createResendProvider(
       const grouped = new Map<string, StoredMessage[]>();
       for (const row of rows) {
         if (row.folder !== wanted) continue;
-        if (query.unread && !row.unread) continue;
+        if ((folder === "smart" || query.unread) && !row.unread) continue;
         if (query.q && !`${row.subject} ${row.text ?? ""}`.toLowerCase().includes(query.q.toLowerCase())) continue;
         const group = grouped.get(row.threadId) ?? [];
         group.push(row);

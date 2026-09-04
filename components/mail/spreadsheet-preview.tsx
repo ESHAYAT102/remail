@@ -21,8 +21,8 @@ const SHEET_EXTENSIONS = /\.(csv|tsv|xlsx|xls|ods)$/i;
 
 const styles = stylex.create({
   container: {
-    width: "90vw",
-    maxHeight: "calc(100vh - 80px)",
+    width: "82vw",
+    maxHeight: "calc(100vh - 170px)",
     overflow: "auto",
     borderRadius: radius.lg,
     backgroundColor: colors.surface,

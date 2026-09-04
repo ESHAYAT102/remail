@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import * as stylex from "@stylexjs/stylex";
-import { SenderAliasInput } from "@/components/mail/sender-alias-input";
+import { SenderField } from "@/components/mail/sender-alias-input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IconButton } from "@/components/ui/icon-button";
@@ -563,32 +563,6 @@ function AddressField({
   );
 }
 
-function SenderField({
-  value,
-  onChange,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  const separator = value.lastIndexOf("@");
-  const domain = separator >= 0 ? value.slice(separator + 1) : "";
-  const localPart = separator >= 0 ? value.slice(0, separator) : value;
-
-  return (
-    <div {...stylex.props(styles.row)}>
-      <label htmlFor="compose-from" {...stylex.props(styles.label)}>
-        From
-      </label>
-      <SenderAliasInput
-        id="compose-from"
-        value={localPart}
-        domain={domain}
-        onChange={(alias) => onChange(`${alias}@${domain}`)}
-      />
-    </div>
-  );
-}
-
 export function StandaloneComposer({
   accountId,
   senderEmail,
@@ -765,6 +739,7 @@ export function StandaloneComposer({
             <div {...stylex.props(styles.recipients)}>
               {editableSender ? (
                 <SenderField
+                  id="compose-from"
                   value={draft.from ?? senderEmail}
                   onChange={(from) => editDraft({ from })}
                 />

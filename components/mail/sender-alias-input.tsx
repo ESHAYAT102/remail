@@ -92,6 +92,20 @@ const styles = stylex.create({
     color: colors.textFaint,
     fontSize: fonts.captionSize,
   },
+  fieldRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: space[3],
+    minHeight: 36,
+  },
+  fieldLabel: {
+    flexShrink: 0,
+    width: 28,
+    fontSize: fonts.captionSize,
+    lineHeight: fonts.captionLine,
+    color: colors.textMuted,
+    fontWeight: 500,
+  },
 });
 
 export function SenderAliasInput({
@@ -193,6 +207,35 @@ export function SenderAliasInput({
           )}
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Labeled From row shared by the new-mail and reply composers. */
+export function SenderField({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const separator = value.lastIndexOf("@");
+  const domain = separator >= 0 ? value.slice(separator + 1) : "";
+  const localPart = separator >= 0 ? value.slice(0, separator) : value;
+
+  return (
+    <div {...stylex.props(styles.fieldRow)}>
+      <label htmlFor={id} {...stylex.props(styles.fieldLabel)}>
+        From
+      </label>
+      <SenderAliasInput
+        id={id}
+        value={localPart}
+        domain={domain}
+        onChange={(alias) => onChange(`${alias}@${domain}`)}
+      />
     </div>
   );
 }

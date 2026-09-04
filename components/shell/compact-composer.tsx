@@ -11,7 +11,9 @@ import {
   RichTextEditor,
   RichTextToolbar,
 } from "@/components/mail/rich-text-editor";
+import { SenderField } from "@/components/mail/sender-alias-input";
 import { addRedaktFooter } from "@/lib/mail/composer-footer";
+import { isOwnAddress } from "@/lib/mail/identity";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { useFileDrop } from "./use-file-drop";
 import type { ComposeInput, Message } from "@/lib/mail/types";
@@ -338,11 +340,13 @@ function uniqueEmails(emails: string[]) {
 export function draftFromMessage(
   mode: "reply" | "replyAll" | "forward",
   message: Message,
-  userEmail: string,
+  identity: { ownEmails: readonly string[]; defaultFrom: string },
   includeRedaktFooter = true,
 ): ComposeInput {
   const subject = message.subject;
-  const self = userEmail.toLowerCase();
+  const { ownEmails, defaultFrom } = identity;
+  const fromSelf = isOwnAddress(message.from.email, ownEmails);
+  const notOwn = (email: string) => !isOwnAddress(email, ownEmails);
   if (mode === "forward") {
     const from = message.from.name
       ? `${message.from.name} <${message.from.email}>`
@@ -350,6 +354,7 @@ export function draftFromMessage(
     const footer = addRedaktFooter("", includeRedaktFooter);
     const forwarded = `---------- Forwarded message ----------\nFrom: ${from}\nDate: ${message.date}\nSubject: ${subject}\n\n${message.text ?? ""}`;
     return {
+      from: defaultFrom,
       to: "",
       cc: "",
       bcc: "",
@@ -359,16 +364,28 @@ export function draftFromMessage(
       threadId: message.threadId,
     };
   }
-  const to =
+  // Replying to your own message goes back to the other recipients, and
+  // keeps sending from the identity you originally used.
+  const recipients =
     mode === "replyAll"
       ? uniqueEmails([
           message.from.email,
           ...message.to.map((address) => address.email),
           ...(message.cc ?? []).map((address) => address.email),
-        ]).filter((email) => email.toLowerCase() !== self)
-      : [message.from.email];
+        ]).filter(notOwn)
+      : fromSelf
+        ? uniqueEmails([
+            ...message.to.map((address) => address.email),
+            ...(message.cc ?? []).map((address) => address.email),
+          ]).filter(notOwn)
+        : [message.from.email];
+  const replyFrom =
+    [...message.to, ...(message.cc ?? [])]
+      .map((address) => address.email)
+      .find((email) => isOwnAddress(email, ownEmails)) ?? defaultFrom;
   return {
-    to: joinList(to),
+    from: replyFrom,
+    to: joinList(recipients),
     cc: "",
     bcc: "",
     subject: subject.startsWith("Re:") ? subject : `Re: ${subject}`,
@@ -522,7 +539,8 @@ export function CompactComposer({
   }, [animateEntrance]);
 
   const dirty = Boolean(
-    draft.to !== initial.to ||
+    draft.from !== initial.from ||
+      draft.to !== initial.to ||
       draft.cc !== initial.cc ||
       draft.bcc !== initial.bcc ||
       draft.text !== initial.text ||
@@ -569,6 +587,13 @@ export function CompactComposer({
         onConfirm={onClose}
       />
       <div {...stylex.props(styles.heading)}>{heading}</div>
+      {draft.from !== undefined ? (
+        <SenderField
+          id="reply-from"
+          value={draft.from}
+          onChange={(from) => editDraft({ from })}
+        />
+      ) : null}
       <AddressField
         id="reply-to"
         label="To"

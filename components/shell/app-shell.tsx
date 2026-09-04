@@ -50,6 +50,7 @@ import {
   persistThreadUnread,
 } from "@/lib/mail/thread-state";
 import type { FolderCounts } from "@/lib/mail/folder-counts";
+import { defaultSenderEmail, ownAddressList } from "@/lib/mail/identity";
 import {
   collectThreadSelectionTargets,
   type ThreadBulkAction,
@@ -204,6 +205,8 @@ type MailShellContextValue = {
   account: MailAccount;
   sessionUser: SessionUser;
   userEmail: string;
+  /** Every address that counts as "me": mailbox, login identity, domain mailbox. */
+  ownEmails: string[];
   userName: string;
   demoMode: boolean;
   preferences: UserPreferences;
@@ -472,7 +475,15 @@ export function AppShell({
   const [composerDraft, setComposerDraft] = useState<ComposeInput | null>(null);
   const [composerSession, setComposerSession] = useState(0);
   const [recalled, setRecalled] = useState<PendingSend | null>(null);
-  const [folderCountDeltas, setFolderCountDeltas] = useState<Partial<FolderCounts>>({});
+  const [folderCountState, setFolderCountState] = useState<{
+    source: FolderCounts;
+    deltas: Partial<FolderCounts>;
+  }>(() => ({ source: folderCounts, deltas: {} }));
+  if (folderCountState.source !== folderCounts) {
+    // A server refresh now includes the optimistic changes. Drop their local
+    // deltas so those changes are not counted a second time.
+    setFolderCountState({ source: folderCounts, deltas: {} });
+  }
   const folderPages = useRef(new Map<string, ThreadListPage>());
   const previousPath = useRef(pathname);
 
@@ -489,6 +500,23 @@ export function AppShell({
   );
 
   const folder = routeFolder ?? "inbox";
+
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    const interval = window.setInterval(refresh, 3000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [router]);
   const activeCollection = collections.find(
     (collection) => collection.id === collectionIdFromView(folder),
   );
@@ -542,16 +570,24 @@ export function AppShell({
       Object.fromEntries(
         mailFolderIds.map((id) => [
           id,
-          Math.max(0, folderCounts[id] + (folderCountDeltas[id] ?? 0)),
+          Math.max(0, folderCounts[id] + (folderCountState.deltas[id] ?? 0)),
         ]),
       ) as FolderCounts,
-    [folderCountDeltas, folderCounts],
+    [folderCountState.deltas, folderCounts],
+  );
+
+  const ownEmails = useMemo(
+    () => ownAddressList(account.email, activeUser.email, domain?.mailbox),
+    [account.email, activeUser.email, domain?.mailbox],
   );
 
   const adjustUnreadCounts = useCallback((_folder: string, delta: number) => {
-    setFolderCountDeltas((current) => ({
+    setFolderCountState((current) => ({
       ...current,
-      smart: (current.smart ?? 0) + delta,
+      deltas: {
+        ...current.deltas,
+        smart: (current.deltas.smart ?? 0) + delta,
+      },
     }));
   }, []);
 
@@ -561,11 +597,16 @@ export function AppShell({
       if (!source || source === "archived") return;
       // Badges show unread threads, so read threads move silently.
       if (!unread) return;
-      setFolderCountDeltas((current) => ({
+      setFolderCountState((current) => ({
         ...current,
-        [source]: (current[source] ?? 0) - direction,
-        archived: (current.archived ?? 0) + direction,
-        smart: (current.smart ?? 0) + (source === "inbox" ? -direction : 0),
+        deltas: {
+          ...current.deltas,
+          [source]: (current.deltas[source] ?? 0) - direction,
+          archived: (current.deltas.archived ?? 0) + direction,
+          smart:
+            (current.deltas.smart ?? 0) +
+            (source === "inbox" ? -direction : 0),
+        },
       }));
     },
     [],
@@ -582,14 +623,17 @@ export function AppShell({
       if (!source || source === destination) return;
       // Badges show unread threads, so read threads move silently.
       if (!unread) return;
-      setFolderCountDeltas((current) => ({
+      setFolderCountState((current) => ({
         ...current,
-        [source]: (current[source] ?? 0) - direction,
-        [destination]: (current[destination] ?? 0) + direction,
-        smart:
-          (current.smart ?? 0) +
-          (source === "inbox" ? -direction : 0) +
-          (destination === "inbox" ? direction : 0),
+        deltas: {
+          ...current.deltas,
+          [source]: (current.deltas[source] ?? 0) - direction,
+          [destination]: (current.deltas[destination] ?? 0) + direction,
+          smart:
+            (current.deltas.smart ?? 0) +
+            (source === "inbox" ? -direction : 0) +
+            (destination === "inbox" ? direction : 0),
+        },
       }));
     },
     [],
@@ -597,9 +641,14 @@ export function AppShell({
 
   const adjustStarredCounts = useCallback(
     (starred: boolean, direction: 1 | -1) => {
-      setFolderCountDeltas((current) => ({
+      setFolderCountState((current) => ({
         ...current,
-        starred: (current.starred ?? 0) + (starred ? direction : -direction),
+        deltas: {
+          ...current.deltas,
+          starred:
+            (current.deltas.starred ?? 0) +
+            (starred ? direction : -direction),
+        },
       }));
     },
     [],
@@ -818,37 +867,39 @@ export function AppShell({
         compose();
       }
       if (
-        event.key === "ArrowLeft" &&
+        (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&
-        isTyping(event)
-      ) {
-        return;
-      }
-      if (
-        event.key === "ArrowLeft" &&
-        !event.altKey &&
-        !event.ctrlKey &&
-        !event.metaKey
+        !event.shiftKey &&
+        !isTyping(event)
       ) {
         const idx = visibleTabs.findIndex((tab) => tab.id === activeId);
-        if (idx > 0) {
+        const target =
+          event.key === "ArrowLeft" ? visibleTabs[idx - 1] : visibleTabs[idx + 1];
+        if (target) {
           event.preventDefault();
-          router.push(visibleTabs[idx - 1].href);
+          router.push(target.href);
         }
         return;
       }
       if (
-        event.key === "ArrowRight" &&
+        preferences.singleKeyShortcuts &&
+        (event.key.toLowerCase() === "h" || event.key.toLowerCase() === "l") &&
         !event.altKey &&
         !event.ctrlKey &&
-        !event.metaKey
+        !event.metaKey &&
+        !event.shiftKey &&
+        !isTyping(event)
       ) {
         const idx = visibleTabs.findIndex((tab) => tab.id === activeId);
-        if (idx >= 0 && idx < visibleTabs.length - 1) {
+        const target =
+          event.key.toLowerCase() === "h"
+            ? visibleTabs[idx - 1]
+            : visibleTabs[idx + 1];
+        if (target) {
           event.preventDefault();
-          router.push(visibleTabs[idx + 1].href);
+          router.push(target.href);
         }
         return;
       }
@@ -862,6 +913,7 @@ export function AppShell({
       account,
       sessionUser: activeUser,
       userEmail: account.email,
+      ownEmails,
       userName:
         activeUser.name,
       demoMode,
@@ -915,6 +967,7 @@ export function AppShell({
       rememberFolderPage,
       getFolderPage,
       account,
+      ownEmails,
     ],
   );
 
@@ -984,11 +1037,7 @@ export function AppShell({
         <StandaloneComposer
           key={`${composerSession}:${composerDraft?.draftId ?? recalled?.id ?? "new"}:${preferences.includeRedaktFooter}`}
           accountId={account.id}
-          senderEmail={
-            preferences.defaultSenderAlias
-              ? `${preferences.defaultSenderAlias}@${account.email.split("@").at(-1)}`
-              : account.email
-          }
+          senderEmail={defaultSenderEmail(account.email, preferences.defaultSenderAlias)}
           editableSender
           supportsDrafts={account.capabilities.includes("drafts")}
           open={composeOpen}
@@ -1560,6 +1609,7 @@ export function ThreadRoute({
     adjustStarredCounts,
     adjustUnreadCounts,
     userEmail,
+    ownEmails,
     userName,
     pending,
     recalled,
@@ -1879,6 +1929,8 @@ export function ThreadRoute({
           accountId={account.id}
           detail={detail}
           userEmail={userEmail}
+          ownEmails={ownEmails}
+          senderEmail={defaultSenderEmail(account.email, preferences.defaultSenderAlias)}
           userName={userName}
           sending={sending}
           pending={pending}
@@ -1924,6 +1976,7 @@ export function DraftRoute({ detail }: { detail: ThreadDetail }) {
     const message = detail.messages.at(-1);
     if (!message || !detail.draftId) return;
     openDraft({
+      from: message.from.email || undefined,
       to: message.to.map((address) => address.email).join(", "),
       cc: message.cc?.map((address) => address.email).join(", ") ?? "",
       bcc: message.bcc?.map((address) => address.email).join(", ") ?? "",

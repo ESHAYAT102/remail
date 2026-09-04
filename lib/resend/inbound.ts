@@ -1,9 +1,14 @@
 import "server-only";
 
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { domains, hostedAttachments, hostedMessages } from "@/lib/db/schema";
 import { getResend, unwrapResend } from "./client";
+import {
+  fallbackReplyThread,
+  normalizeMessageId,
+  referencedMessageIds,
+} from "./threading";
 
 type ReceivedData = {
   email_id: string;
@@ -34,13 +39,23 @@ export async function ingestReceivedEmail(data: ReceivedData) {
 
   const resend = await getResend(owner.userId);
   const remote = unwrapResend(await resend.emails.receiving.get(data.email_id));
-  const references = remote.headers?.references?.split(/\s+/).filter(Boolean) ?? [];
-  const parentIds = [remote.headers?.["in-reply-to"], ...references].filter(Boolean) as string[];
-  const [parent] = parentIds.length
-    ? await database.select().from(hostedMessages).where(and(eq(hostedMessages.userId, owner.userId), or(...parentIds.map((id) => eq(hostedMessages.messageId, id)))))
-    : [];
+  const parentIds = referencedMessageIds(remote.headers);
+  const candidates = await database
+    .select()
+    .from(hostedMessages)
+    .where(eq(hostedMessages.userId, owner.userId))
+    .orderBy(desc(hostedMessages.receivedAt));
+  const parent = candidates.find(
+    (candidate) =>
+      candidate.messageId &&
+      parentIds.includes(normalizeMessageId(candidate.messageId)),
+  );
+  const from = parseAddress(remote.headers?.from ?? remote.from);
   const id = crypto.randomUUID();
-  const threadId = parent?.threadId ?? id;
+  const threadId =
+    parent?.threadId ??
+    fallbackReplyThread(remote.subject, from.email, candidates) ??
+    id;
   const attachmentList = remote.attachments.length
     ? unwrapResend(await resend.emails.receiving.attachments.list({ emailId: data.email_id }))
     : { data: [] };
@@ -55,10 +70,21 @@ export async function ingestReceivedEmail(data: ReceivedData) {
     };
   }));
   await database.transaction(async (tx) => {
+    if (threadId !== id) {
+      await tx
+        .update(hostedMessages)
+        .set({ folder: "inbox" })
+        .where(
+          and(
+            eq(hostedMessages.userId, owner.userId),
+            eq(hostedMessages.threadId, threadId),
+          ),
+        );
+    }
     await tx.insert(hostedMessages).values({
       id, userId: owner.userId, domainId: owner.id, providerEmailId: data.email_id,
       messageId: remote.message_id, threadId, direction: "inbound", folder: "inbox", unread: true,
-      from: parseAddress(remote.headers?.from ?? remote.from), to: remote.to.map(parseAddress),
+      from, to: remote.to.map(parseAddress),
       cc: (remote.cc ?? []).map(parseAddress), bcc: (remote.bcc ?? []).map(parseAddress),
       replyTo: (remote.reply_to ?? []).map(parseAddress), subject: remote.subject,
       text: remote.text, html: remote.html, headers: remote.headers ?? {}, receivedAt: new Date(remote.created_at),

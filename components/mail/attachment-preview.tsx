@@ -45,6 +45,10 @@ const styles = stylex.create({
     justifyContent: "center",
     maxWidth: "100%",
     maxHeight: "100%",
+    /* Clear the fixed download toolbar so the preview never slides
+       under it. */
+    marginTop: 64,
+    paddingBottom: space[4],
     transform: "scale(0.92)",
     opacity: 0,
     "@media (prefers-reduced-motion: no-preference)": {
@@ -70,15 +74,15 @@ const styles = stylex.create({
     color: "#fff",
   },
   image: {
-    maxWidth: "90vw",
-    maxHeight: "calc(100vh - 80px)",
+    maxWidth: "82vw",
+    maxHeight: "calc(100vh - 170px)",
     objectFit: "contain",
     borderRadius: radius.lg,
     boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
   },
   frame: {
-    width: "90vw",
-    height: "calc(100vh - 80px)",
+    width: "82vw",
+    height: "calc(100vh - 170px)",
     borderWidth: 0,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,

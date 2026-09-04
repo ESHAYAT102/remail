@@ -5,6 +5,7 @@ import * as stylex from "@stylexjs/stylex";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { CompactComposer, draftFromMessage } from "@/components/shell/compact-composer";
+import { isOwnAddress } from "@/lib/mail/identity";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { formatDay } from "@/lib/format";
 import { messageSpacing } from "@/lib/mail/message-grouping";
@@ -98,6 +99,8 @@ export function ThreadView({
   accountId,
   detail,
   userEmail,
+  ownEmails,
+  senderEmail,
   userName,
   sending,
   pending,
@@ -116,6 +119,8 @@ export function ThreadView({
   accountId: string;
   detail: ThreadDetail;
   userEmail: string;
+  ownEmails: readonly string[];
+  senderEmail: string;
   userName: string;
   sending: boolean;
   pending: PendingSend[];
@@ -191,7 +196,7 @@ export function ThreadView({
             <MessageCard
               accountId={accountId}
               message={message}
-              userEmail={userEmail}
+              ownEmails={ownEmails}
               loadRemoteImages={loadRemoteImages}
               theme={theme}
             />
@@ -212,12 +217,14 @@ export function ThreadView({
             key={item.id}
             {...stylex.props(
               styles.pending,
-              index === 0 && last?.from.email !== userEmail && styles.pendingSeparated,
+              index === 0 &&
+                !isOwnAddress(last?.from.email, ownEmails) &&
+                styles.pendingSeparated,
             )}
           >
             <PendingSendCard
               pending={item}
-              from={userEmail}
+              from={item.input.from ?? userEmail}
               fromName={userName}
               onUndo={() => onUndo(item.id)}
               onSendNow={() => onSendNow(item.id)}
@@ -272,8 +279,16 @@ export function ThreadView({
               mode={mode}
               heading={actionLabel[mode]}
               initial={
-                recalled ??
-                draftFromMessage(mode, last, userEmail, includeRedaktFooter)
+                recalled
+                  ? recalled.from
+                    ? recalled
+                    : { ...recalled, from: senderEmail }
+                  : draftFromMessage(
+                      mode,
+                      last,
+                      { ownEmails, defaultFrom: senderEmail },
+                      includeRedaktFooter,
+                    )
               }
               sending={sending}
               animateEntrance={animateComposerEntrance}

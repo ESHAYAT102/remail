@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Icons } from "@/components/ui/icons";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { bytes, formatTime, formatWhen } from "@/lib/format";
+import { isOwnAddress } from "@/lib/mail/identity";
 import type { Address, Attachment, Message } from "@/lib/mail/types";
 import type { ThemePreference } from "@/lib/preferences";
 import { MessageBody } from "./message-body";
@@ -189,15 +190,15 @@ export function MessageCardFrame({
   );
 }
 
-function label(address: Address, userEmail: string) {
-  if (address.email === userEmail) return "me";
+function label(address: Address, ownEmails: readonly string[]) {
+  if (isOwnAddress(address.email, ownEmails)) return "me";
   return address.name || address.email;
 }
 
 /** "to me", "to me and Mira Chen", "to Mira Chen and 2 others". */
-function audience(message: Message, userEmail: string) {
+function audience(message: Message, ownEmails: readonly string[]) {
   const names = [...message.to, ...(message.cc ?? [])].map((item) =>
-    label(item, userEmail),
+    label(item, ownEmails),
   );
   if (names.length === 0) return null;
   if (names.length <= 2) return `to ${names.join(" and ")}`;
@@ -207,20 +208,20 @@ function audience(message: Message, userEmail: string) {
 export function MessageCard({
   accountId,
   message,
-  userEmail,
+  ownEmails,
   loadRemoteImages,
   theme,
 }: {
   accountId: string;
   message: Message;
-  userEmail: string;
+  ownEmails: readonly string[];
   loadRemoteImages: boolean;
   theme: ThemePreference;
 }) {
   const sender = message.from.name || message.from.email;
-  const isMe = message.from.email === userEmail;
+  const isMe = isOwnAddress(message.from.email, ownEmails);
   const files = message.attachments.filter((file) => !file.inline);
-  const to = audience(message, userEmail);
+  const to = audience(message, ownEmails);
   const senderId = `msg-from-${message.id}`;
   const [previewFile, setPreviewFile] = useState<Attachment | null>(null);
 
