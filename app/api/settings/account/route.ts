@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { isAPIError } from "better-auth/api";
 import { auth } from "@/lib/auth";
+import { userHasPassword } from "@/lib/data/auth-accounts";
 import { deleteDemoUser } from "@/lib/demo/store";
 import { isDemoMode } from "@/lib/env";
 import { DEMO_COOKIE, getSessionUser } from "@/lib/session";
@@ -15,7 +16,8 @@ export async function DELETE(request: Request) {
     );
   }
   const body = (await request.json().catch(() => ({}))) as { password?: string };
-  if (!body.password) {
+  const hasPassword = isDemoMode() || await userHasPassword(user.id);
+  if (hasPassword && !body.password) {
     return NextResponse.json(
       { error: "Enter your password to delete the account." },
       { status: 400 },
@@ -23,7 +25,7 @@ export async function DELETE(request: Request) {
   }
 
   if (isDemoMode()) {
-    if (!deleteDemoUser(user.id, body.password)) {
+    if (!deleteDemoUser(user.id, body.password!)) {
       return NextResponse.json(
         { error: "Password is incorrect. Enter it again." },
         { status: 400 },
@@ -43,7 +45,7 @@ export async function DELETE(request: Request) {
   try {
     await auth.api.deleteUser({
       headers: await headers(),
-      body: { password: body.password },
+      body: body.password ? { password: body.password } : {},
     });
     return NextResponse.json({ ok: true });
   } catch (error) {

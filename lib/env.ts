@@ -22,23 +22,7 @@ export function getGoogleOAuthConfig() {
 }
 
 export function areGoogleCtasEnabled() {
-  // Keep the public launch hidden until Google approves production verification.
-  return (
-    Boolean(getGoogleOAuthConfig()) && getAppUrl() !== "https://redakt.app"
-  );
-}
-
-export function getGooglePubSubConfig() {
-  const topicName = process.env.GOOGLE_PUBSUB_TOPIC?.trim();
-  const audience = process.env.GOOGLE_PUBSUB_AUDIENCE?.trim();
-  const serviceAccountEmail =
-    process.env.GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL?.trim();
-  if (!topicName || !audience || !serviceAccountEmail) return null;
-  return { topicName, audience, serviceAccountEmail };
-}
-
-export function getMailSyncCronSecret() {
-  return process.env.MAIL_SYNC_CRON_SECRET?.trim() || null;
+  return Boolean(getGoogleOAuthConfig());
 }
 
 export function getAppUrl() {

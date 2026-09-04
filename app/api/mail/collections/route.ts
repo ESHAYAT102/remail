@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       error instanceof Error &&
       /^A (folder|label) with this name/.test(error.message)
         ? error.message
-        : `Unable to create this ${provider.account.connector === "gmail" ? "label" : "folder"}. Try again.`;
+        : "Unable to create this folder. Try again.";
     return NextResponse.json({ error: message }, { status: 400 });
   }
 

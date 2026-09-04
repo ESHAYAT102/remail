@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
       dynamic: 30,
     },
   },
-  serverExternalPackages: ["pg", "isomorphic-dompurify", "jsdom"],
+  serverExternalPackages: ["pg"],
 };
 
 export default nextConfig;

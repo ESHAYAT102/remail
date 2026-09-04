@@ -21,8 +21,8 @@ const sections: LegalSectionContent[] = [
         content: (
           <>
             This policy applies to the Remail website, hosted service, and email
-            client. Remail is an open-source mail product that lets you connect
-            Gmail or use a mailbox on a domain you control. Questions about this
+            client. Remail is an open-source mail product for mailboxes on
+            domains you control. Questions about this
             policy can be sent to{" "}
             <LegalLink href={`mailto:${LEGAL_CONTACT_EMAIL}`}>
               {LEGAL_CONTACT_EMAIL}
@@ -50,16 +50,9 @@ const sections: LegalSectionContent[] = [
             secure and troubleshoot the service.
           </span>,
           <span key="google">
-            <strong>Google account and Gmail information.</strong> Your Google
-            account identifier, email address, name, profile image, OAuth grant,
-            Gmail mailbox identity, message and thread metadata, message content,
-            attachments, drafts, labels, and mailbox changes you ask Remail to
-            make.
-          </span>,
-          <span key="sync">
-            <strong>Gmail connection metadata.</strong> A Gmail history cursor,
-            subscription expiry, last-sync time, connection health, and error
-            state so Remail can keep the inbox current.
+            <strong>Google account information.</strong> If you use Google
+            sign-in, Remail receives your Google account identifier, email
+            address, name, and profile image.
           </span>,
           <span key="hosted">
             <strong>Hosted-mail information.</strong> If you use a custom domain,
@@ -79,7 +72,6 @@ const sections: LegalSectionContent[] = [
         items: [
           "Create and secure your account, authenticate requests, and remember your preferences.",
           "Display, search, organize, draft, send, and otherwise process email when you choose those actions.",
-          "Keep connected mailboxes synchronized and notify the interface when Gmail changes.",
           "Provide custom-domain mailboxes and help you configure required DNS records.",
           "Prevent abuse, diagnose failures, maintain reliability, and comply with legal obligations.",
           "Respond to support requests and communicate material service or policy changes.",
@@ -88,18 +80,15 @@ const sections: LegalSectionContent[] = [
     ],
   },
   {
-    title: "How Remail handles Google user data",
+    title: "Google sign-in",
     blocks: [
       {
         type: "paragraph",
         content: (
           <>
-            Google sign-in and Gmail access are separate. Google sign-in requests
-            basic identity information. Remail requests Gmail access only when you
-            choose to connect Gmail. That access lets Remail show and search your
-            mailbox, read messages and attachments, create and send drafts,
-            change read and starred state, apply mailbox labels, and move threads
-            between inbox, archive, spam, and trash.
+            Google sign-in requests only basic identity information: your account
+            identifier, email address, name, and profile image. Remail does not
+            request access to your Google mailbox.
           </>
         ),
       },
@@ -107,13 +96,8 @@ const sections: LegalSectionContent[] = [
         type: "paragraph",
         content: (
           <>
-            Remail stores your Google account identity, encrypted access and
-            refresh tokens, granted permissions, and the connection metadata
-            described above. Gmail remains the source of truth. Gmail message
-            bodies and attachments are fetched when needed to serve your request
-            and are not persisted in Remail&apos;s application database. Remail
-            processes the fetched data to return the requested mailbox view to
-            your authenticated browser.
+            Remail stores the account identity and authentication data needed to
+            sign you in securely.
           </>
         ),
       },
@@ -123,9 +107,7 @@ const sections: LegalSectionContent[] = [
           <>
             Remail does not sell Google user data, use it for advertising,
             determine creditworthiness, or use it to train general-purpose AI or
-            machine-learning models. People do not read your Gmail data unless
-            you give explicit permission for support, access is necessary to
-            investigate a security or abuse issue, or access is required by law.
+            machine-learning models.
           </>
         ),
       },
@@ -155,7 +137,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "list",
         items: [
-          "With Google when Remail makes Gmail API or account requests on your behalf.",
+          "With Google when you choose Google sign-in.",
           "With infrastructure providers that host the application, database, mail server, networking, or security services, subject to their role in operating Remail.",
           "When you direct Remail to send mail or otherwise share content with a recipient.",
           "When required by applicable law or necessary to protect users, Remail, or the public from fraud, abuse, or security threats.",
@@ -170,17 +152,11 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "Account information and connection metadata are kept while your account or connected mailbox remains active, and longer only when needed for security, legal obligations, or resolving disputes. Gmail message bodies and attachments are not retained in Remail's application database. Operational logs are kept only as long as reasonably necessary for security and reliability.",
+          "Account information is kept while your account remains active, and longer only when needed for security, legal obligations, or resolving disputes. Operational logs are kept only as long as reasonably necessary for security and reliability.",
       },
       {
         type: "list",
         items: [
-          <span key="disconnect">
-            <strong>Disconnect Gmail:</strong> Open Settings, choose Email
-            accounts, then remove the Gmail account. Remail stops the Gmail watch,
-            asks Google to revoke the grant, clears local token material, and
-            deletes the connection metadata. Mail remains in Gmail.
-          </span>,
           <span key="google">
             <strong>Revoke at Google:</strong> You can also remove Remail from your{" "}
             <LegalLink href="https://myaccount.google.com/connections">
@@ -215,7 +191,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "Remail uses necessary cookies for authentication, security, and saved preferences. It may use browser storage to remember interface state such as open mailbox tabs. Remail does not use third-party advertising cookies. Google may use its own cookies when you choose Google sign-in or Gmail authorization, subject to Google's policies.",
+          "Remail uses necessary cookies for authentication, security, and saved preferences. It may use browser storage to remember interface state such as open mailbox tabs. Remail does not use third-party advertising cookies. Google may use its own cookies when you choose Google sign-in, subject to Google's policies.",
       },
       {
         type: "paragraph",
@@ -230,7 +206,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "You can update your name and preferences, disconnect Gmail, revoke Google access, or delete your Remail account from Settings. Depending on where you live, you may also have rights to access, correct, delete, restrict, or receive a copy of personal information. Contact Remail to make a request. Identity verification may be required before a request is completed.",
+          "You can update your name and preferences, revoke Google sign-in access, or delete your Remail account from Settings. Depending on where you live, you may also have rights to access, correct, delete, restrict, or receive a copy of personal information. Contact Remail to make a request. Identity verification may be required before a request is completed.",
       },
     ],
   },

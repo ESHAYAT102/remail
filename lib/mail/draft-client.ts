@@ -2,6 +2,7 @@ import type { ComposeInput } from "./types";
 
 function draftBody(input: ComposeInput, files: File[]) {
   const form = new FormData();
+  if (input.from) form.set("from", input.from);
   form.set("to", input.to);
   form.set("cc", input.cc ?? "");
   form.set("bcc", input.bcc ?? "");

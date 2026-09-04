@@ -1,5 +1,5 @@
 import { Onboarding } from "@/components/shell/onboarding";
-import { areGoogleCtasEnabled, isDemoMode } from "@/lib/env";
+import { isDemoMode } from "@/lib/env";
 import { getSessionUser } from "@/lib/session";
 
 export const instant = false;
@@ -11,7 +11,6 @@ export default async function OnboardingPage({
     getSessionUser(),
     searchParams,
   ]);
-  const googleEnabled = areGoogleCtasEnabled();
   const addingAccount = Boolean(
     user && !isDemoMode() && search.add === "account",
   );
@@ -21,13 +20,7 @@ export default async function OnboardingPage({
       authenticated={Boolean(user) && !addingAccount}
       addingAccount={addingAccount}
       demoMode={isDemoMode()}
-      googleEnabled={googleEnabled}
       initialName={addingAccount ? undefined : user?.name}
-      initialError={
-        googleEnabled && search.auth === "gmail"
-          ? "Gmail wasn’t connected. Choose Gmail to try again."
-          : undefined
-      }
     />
   );
 }

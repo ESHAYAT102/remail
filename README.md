@@ -1,12 +1,11 @@
 # Remail
 
 A design-first, open-source mail client and provider. Host mail on a domain you
-own or connect Gmail, then read and send from a quiet, account-aware inbox.
+own, then read and send from a quiet inbox.
 
-Remail is the product layer: onboarding, connected accounts, DNS, and the inbox.
-[Resend](https://resend.com) handles custom-domain sending and receiving; Gmail
-stays the source of truth for connected Google accounts. Inbound messages and
-attachments are stored in Remail's Postgres database.
+Remail is the product layer: onboarding, DNS, and the inbox.
+[Resend](https://resend.com) handles custom-domain sending and receiving.
+Inbound messages and attachments are stored in Remail's Postgres database.
 
 The project is early (`0.1.0`). Demo mode is the fastest way to look at the product. Live mode talks to a real mail engine on your machine.
 
@@ -48,13 +47,6 @@ connects their own Resend API key and webhook signing secret during onboarding.
 
 `docker compose up --build` also runs the app in a container. Prefer `pnpm dev:live` while developing.
 
-### Gmail
-
-Gmail connections use OAuth and the Gmail API in live mode. Add the Google
-client credentials to `.env`, then use **Manage accounts → Add Gmail account**.
-The complete OAuth, restricted-scope review, Pub/Sub, watch-renewal, encryption,
-and privacy runbook is in [docs/gmail.md](docs/gmail.md).
-
 ### Internet mail
 
 Create a Resend webhook subscribed to `email.received` at
@@ -68,24 +60,16 @@ To put this on Vercel, Railway, Coolify, Openship, or a VPS, see [docs/self-host
 ## How it fits together
 
 ```
-  browser  →  account-scoped Next.js routes + provider-neutral mail contract
+  browser  →  account-scoped Next.js routes + mail contract
                                       │
-                 ┌────────────────────┴────────────────────┐
-                 │                                         │
-         Remail hosted adapter                     Gmail API adapter
-        Resend + local mailbox                  on-demand mail + drafts
-                 │                                         │
-            Postgres                              Google OAuth grant
-                 └────────────────────┬────────────────────┘
+                          Remail hosted adapter
+                         Resend + local mailbox
                                       │
-                         Postgres connection metadata
-                      (no connected-Gmail message store)
+                                  Postgres
 ```
 
 `getMailProvider(user, accountId)` in `lib/mail/get-provider.ts` resolves a
-provider-neutral `MailAccount`, obtains credentials through its connector, and
-returns the shared `MailProvider` contract. Domain administration is a separate
-contract, so an external mailbox connector never inherits hosted-domain powers.
+hosted `MailAccount` and returns the shared `MailProvider` contract.
 
 Mail views have canonical, refresh-safe URLs. Authenticated route data is loaded
 on the server; navigation, search controls, pagination, compose, and the
@@ -108,8 +92,7 @@ URL, so a copied link and a full reload render the same result.
 | `components/mail/` | Thread list and reader |
 | `components/ui/` | Shared controls (StyleX + Base UI) |
 | `lib/mail/` | Provider types and routing |
-| `lib/google/` | Google OAuth credential and enrollment lifecycle |
-| `lib/gmail/` | Gmail API client, normalization, MIME, provider, and sync adapter |
+| `lib/google/` | Optional Google identity sign-in configuration |
 | `lib/demo/` | Demo store and fixture provider |
 | `lib/resend/` | Resend transport and hosted mailbox provider |
 | `theme/` | StyleX tokens |
@@ -128,11 +111,7 @@ Copy `.env.example` to `.env`. Do not commit `.env`.
 | `BETTER_AUTH_SECRETS` | unused | versioned encryption keys, current first |
 | `BETTER_AUTH_URL` | unused | `http://localhost:3000` |
 | `DATABASE_URL` | unused | Postgres URL |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unused | enables Google sign-in and Gmail OAuth |
-| `GOOGLE_PUBSUB_TOPIC` | unused | optional Gmail push topic |
-| `GOOGLE_PUBSUB_AUDIENCE` | unused | exact authenticated push audience |
-| `GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL` | unused | exact push JWT identity |
-| `MAIL_SYNC_CRON_SECRET` | unused | protects daily watch renewal |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | unused | optionally enables Google sign-in |
 
 Mailbox passwords are at least 8 characters (Better Auth).
 

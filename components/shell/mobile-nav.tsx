@@ -62,7 +62,7 @@ export function MobileNav({
   onSignOut: () => void;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
-  const collectionKind = account.connector === "gmail" ? "label" : "folder";
+  const collectionKind = "folder" as const;
   return (
     <>
       <div {...stylex.props(styles.root)}>
@@ -96,9 +96,11 @@ export function MobileNav({
                     >
                       <Icon size={14} />
                       <span {...stylex.props(styles.label)}>{item.label}</span>
-                      <span {...stylex.props(styles.count)}>
-                        {folderCounts[item.id]}
-                      </span>
+                      {folderCounts[item.id] ? (
+                        <span {...stylex.props(styles.count)}>
+                          {folderCounts[item.id]}
+                        </span>
+                      ) : null}
                       {folder === item.id ? (
                         <span {...stylex.props(styles.current)}>
                           <Icons.check size={14} />
@@ -133,9 +135,9 @@ export function MobileNav({
                       <span {...stylex.props(styles.label)}>
                         {collection.name}
                       </span>
-                      {typeof collection.total === "number" ? (
+                      {collection.unread ? (
                         <span {...stylex.props(styles.count)}>
-                          {collection.total}
+                          {collection.unread}
                         </span>
                       ) : null}
                       {folder === view ? (

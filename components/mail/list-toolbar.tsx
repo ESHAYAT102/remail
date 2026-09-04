@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { CollectionActions } from "@/components/mail/collection-actions";
 import { FolderMark } from "@/components/mail/folder-mark";
@@ -320,6 +320,33 @@ export function ListToolbar({
   const canMoveInbox = folder === "spam" || folder === "trash";
   const showMoreActions = canStar || canMoveInbox || canSpam || canTrash;
   const searchVisible = selectedCount === 0 && showSearch;
+
+  useEffect(() => {
+    const focusSearch = (event: KeyboardEvent) => {
+      if (
+        event.key !== "/" ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        selectedCount > 0
+      ) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.matches("input, textarea, select") || target.isContentEditable)
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setSearchOpen(true);
+      window.requestAnimationFrame(() => inputRef.current?.focus());
+    };
+    window.addEventListener("keydown", focusSearch);
+    return () => window.removeEventListener("keydown", focusSearch);
+  }, [selectedCount]);
 
   const openSearch = () => {
     setSearchOpen(true);

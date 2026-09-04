@@ -1,4 +1,3 @@
-import Image from "next/image";
 import * as stylex from "@stylexjs/stylex";
 import { Icons } from "@/components/ui/icons";
 import type { MailConnectorId } from "@/lib/mail/types";
@@ -20,37 +19,14 @@ const styles = stylex.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surfaceActive,
   },
-  logo: {
-    display: "block",
-  },
 });
 
 function ProviderMark({
-  connector,
   large,
 }: {
-  connector: MailConnectorId;
   large: boolean;
 }) {
-  switch (connector) {
-    case "gmail":
-      return (
-        <Image
-          src="/providers/gmail.svg"
-          alt=""
-          width={large ? 22 : 20}
-          height={large ? 18 : 16}
-          unoptimized
-          {...stylex.props(styles.logo)}
-        />
-      );
-    case "hosted":
-      return <Icons.world size={large ? 19 : 17} />;
-    default: {
-      const unsupportedConnector: never = connector;
-      return unsupportedConnector;
-    }
-  }
+  return <Icons.world size={large ? 19 : 17} />;
 }
 
 export function MailAccountIcon({
@@ -60,6 +36,7 @@ export function MailAccountIcon({
   connector: MailConnectorId;
   size?: "small" | "large";
 }) {
+  void connector;
   const large = size === "large";
 
   return (
@@ -67,7 +44,7 @@ export function MailAccountIcon({
       aria-hidden="true"
       {...stylex.props(styles.root, large && styles.large)}
     >
-      <ProviderMark connector={connector} large={large} />
+      <ProviderMark large={large} />
     </span>
   );
 }

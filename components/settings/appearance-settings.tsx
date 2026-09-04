@@ -1,12 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { SenderAliasInput } from "@/components/mail/sender-alias-input";
 import { useMailShell } from "@/components/shell/app-shell";
+import { mailFoldersForAccount } from "@/components/shell/sidebar";
+import { collectionViewId } from "@/lib/mail/routes";
+import { isValidSenderAlias, normalizeSenderAlias } from "@/lib/mail/sender-aliases";
 import type { UserPreferences } from "@/lib/preferences";
 import {
   ChoiceSetting,
   SettingsActions,
   SettingsCard,
+  SettingsField,
   SettingsPage,
   SettingsStatus,
   ToggleSetting,
@@ -32,10 +37,24 @@ const previewOptions = [
 ] as const;
 
 export function AppearanceSettings() {
-  const { preferences, updatePreferences } = useMailShell();
+  const { account, collections, preferences, updatePreferences } = useMailShell();
   const requestId = useRef(0);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ message: "", error: false });
+  const [senderAlias, setSenderAlias] = useState(preferences.defaultSenderAlias);
+  const domain = account.email.split("@").at(-1) ?? account.email;
+  const folderOptions = [
+    ...mailFoldersForAccount(account).map((folder) => ({
+      value: folder.id,
+      label: folder.label,
+    })),
+    ...collections
+      .filter((collection) => collection.kind === "folder")
+      .map((collection) => ({
+        value: collectionViewId(collection.id),
+        label: collection.name,
+      })),
+  ];
 
   async function save(patch: PreferencePatch) {
     const previous = preferences;
@@ -100,7 +119,31 @@ export function AppearanceSettings() {
         />
       </SettingsCard>
 
-      <SettingsCard title="Composing">
+      <SettingsCard title="Composing" overflowVisible>
+        <SettingsField
+          htmlFor="default-sender-alias"
+          label="Default sender"
+          hint="The address used when you start a new email. Type only the part before @."
+        >
+          <SenderAliasInput
+            id="default-sender-alias"
+            value={senderAlias}
+            domain={domain}
+            disabled={saving}
+            onChange={setSenderAlias}
+            onCommit={(value) => {
+              const alias = normalizeSenderAlias(value);
+              if (alias && !isValidSenderAlias(alias)) {
+                setStatus({ message: "Use only characters valid before the @ sign.", error: true });
+                return;
+              }
+              setSenderAlias(alias);
+              if (alias !== preferences.defaultSenderAlias) {
+                void save({ defaultSenderAlias: alias });
+              }
+            }}
+          />
+        </SettingsField>
         <ToggleSetting
           id="redakt-footer"
           label="Add Remail footer"
@@ -112,6 +155,17 @@ export function AppearanceSettings() {
       </SettingsCard>
 
       <SettingsCard title="Reading">
+        <ChoiceSetting
+          id="default-folder"
+          label="Default folder"
+          description="Choose which folder opens when you launch Remail."
+          value={preferences.defaultFolder}
+          disabled={saving}
+          onChange={(value) =>
+            void save({ defaultFolder: value as UserPreferences["defaultFolder"] })
+          }
+          options={folderOptions}
+        />
         <ChoiceSetting
           id="message-preview"
           label="Message preview"
@@ -136,7 +190,7 @@ export function AppearanceSettings() {
         <ToggleSetting
           id="single-key-shortcuts"
           label="Use single-key shortcuts"
-          description="Press C to compose, R to reply, and J or K to move between messages. Shortcuts with modifier keys always work."
+          description="Press / to search, C to compose, W to close the active tab, J/K or the arrow keys to highlight messages, Space to select, U to toggle read status, Enter to open, R to reply, F to forward, and 1–9 to open sidebar folders. Ctrl/⌘+, opens Settings."
           checked={preferences.singleKeyShortcuts}
           disabled={saving}
           onChange={(singleKeyShortcuts) => void save({ singleKeyShortcuts })}

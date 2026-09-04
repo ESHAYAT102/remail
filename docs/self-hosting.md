@@ -18,7 +18,7 @@ Internet mail only works where SMTP **25** and a matching **PTR** exist. Vercel,
 | --- | --- | --- |
 | Redakt | [Railway](https://railway.com) | Git deploys, previews, private DNS to Postgres. Not the MX. |
 | Postgres | Railway plugin (or Neon) | Managed backups. Same project as the app. |
-| Stalwart | A **mail VPS** we own | Only place Gmail talks to. Pin `stalwartlabs/stalwart:v0.16`. |
+| Stalwart | A **mail VPS** we own | Optional self-hosted mail engine. Pin `stalwartlabs/stalwart:v0.16`. |
 
 Customer domains MX to **our** host, e.g. `mail.redakt.app` → that VPS. One IPv4, warm it slowly (SPF / DKIM / DMARC first, low volume). Do not put Stalwart on Railway or Vercel.
 
@@ -39,7 +39,7 @@ Coolify matches our stack: Git deploy, Let’s Encrypt, native Docker Compose. G
 | Want SSH / no agent on the box | [Openship](https://openship.io) |
 | Have a 1–2 GB VPS | [Dokploy](https://dokploy.com) or raw compose |
 | Only want the UI | Vercel, `DEMO_MODE=true` |
-| Want accounts, not Gmail | Railway for all three (no public MX) |
+| Want account management only | Railway for all three (no public MX) |
 
 Openship’s bundled mail is transactional (often an SES/SMTP relay). That is **not** a substitute for Stalwart. Still run our Stalwart service. Still publish MX to the VPS.
 
@@ -97,7 +97,7 @@ Control plane on your laptop or `openship up` on a box. Builds stream over SSH.
 
 Deploy this repo / compose. Ignore Openship’s bundled transactional mail. Run Stalwart. MX still hits port 25 on the VPS.
 
-## Railway (app only, or accounts without Gmail)
+## Railway (app only)
 
 [Railway](https://railway.com) is right for **our** Redakt + Postgres. It can also run Stalwart for JMAP, but its [TCP proxy](https://docs.railway.com/networking/tcp-proxy) is a random high port — not a usable MX.
 

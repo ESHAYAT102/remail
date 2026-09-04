@@ -254,6 +254,10 @@ textarea {
   [data-modality="pointer"] :focus-visible {
     outline: none !important;
   }
+
+  [data-border-focus]:focus-visible {
+    outline: none !important;
+  }
 }
 
 @media (forced-colors: active) {

@@ -43,25 +43,38 @@ export function attachmentBytes(attachment: ComposeAttachment) {
   return Buffer.from(attachment.data, "base64");
 }
 
-export async function composeFromRequest(request: Request): Promise<ComposeInput> {
+export async function composeFromRequest(request: Request): Promise<{
+  input: ComposeInput;
+  attachmentUploadIds: string[];
+}> {
   const type = request.headers.get("content-type") ?? "";
   if (type.includes("multipart/form-data")) {
     const form = await request.formData();
     const files = form.getAll("files").filter((item): item is File => item instanceof File);
-    return validateComposeInput({
-      to: String(form.get("to") ?? ""),
-      cc: String(form.get("cc") ?? "") || undefined,
-      bcc: String(form.get("bcc") ?? "") || undefined,
-      subject: String(form.get("subject") ?? ""),
-      text: String(form.get("text") ?? ""),
-      html: String(form.get("html") ?? "") || undefined,
-      inReplyTo: String(form.get("inReplyTo") ?? "") || undefined,
-      threadId: String(form.get("threadId") ?? "") || undefined,
-      draftId: String(form.get("draftId") ?? "") || undefined,
-      attachments: await filesToAttachments(files),
-    });
+    const uploadIds = String(form.get("attachmentUploadIds") ?? "")
+      .split(",")
+      .filter(Boolean);
+    return {
+      input: validateComposeInput({
+        from: String(form.get("from") ?? "") || undefined,
+        to: String(form.get("to") ?? ""),
+        cc: String(form.get("cc") ?? "") || undefined,
+        bcc: String(form.get("bcc") ?? "") || undefined,
+        subject: String(form.get("subject") ?? ""),
+        text: String(form.get("text") ?? ""),
+        html: String(form.get("html") ?? "") || undefined,
+        inReplyTo: String(form.get("inReplyTo") ?? "") || undefined,
+        threadId: String(form.get("threadId") ?? "") || undefined,
+        draftId: String(form.get("draftId") ?? "") || undefined,
+        attachments: files.length ? await filesToAttachments(files) : undefined,
+      }),
+      attachmentUploadIds: uploadIds,
+    };
   }
-  return validateComposeInput(await request.json());
+  return {
+    input: validateComposeInput(await request.json()),
+    attachmentUploadIds: [],
+  };
 }
 
 export function validateComposeInput(value: unknown): ComposeInput {
@@ -69,6 +82,7 @@ export function validateComposeInput(value: unknown): ComposeInput {
     throw new MailError("Invalid message.");
   }
   const input = value as Record<string, unknown>;
+  const from = stringField(input.from, "sender", 320);
   const to = stringField(input.to, "recipients", MAX_HEADER, true);
   const cc = stringField(input.cc, "Cc", MAX_HEADER);
   const bcc = stringField(input.bcc, "Bcc", MAX_HEADER);
@@ -84,6 +98,7 @@ export function validateComposeInput(value: unknown): ComposeInput {
   const attachments = validateAttachments(input.attachments);
   const cleanHtml = styledComposerHtml(html);
   return {
+    from: from?.trim() || undefined,
     to: to.trim(),
     cc: cc?.trim() || undefined,
     bcc: bcc?.trim() || undefined,

@@ -35,7 +35,7 @@ const styles = stylex.create({
   },
 });
 
-export function SecuritySettings() {
+export function SecuritySettings({ hasPassword }: { hasPassword: boolean }) {
   const { demoMode } = useMailShell();
   const [sessions, setSessions] = useState<PublicSession[]>([]);
   const [sessionsStatus, setSessionsStatus] = useState({
@@ -106,9 +106,13 @@ export function SecuritySettings() {
   return (
     <SettingsPage
       title="Security"
-      description="Change your password and review the browsers signed in to your account."
+      description={
+        hasPassword
+          ? "Change your password and review the browsers signed in to your account."
+          : "Review the browsers signed in to your account."
+      }
     >
-      <SettingsCard title="Password">
+      {hasPassword ? <SettingsCard title="Password">
         <form
           className={settingsFormClass.className}
           style={settingsFormClass.style}
@@ -211,7 +215,7 @@ export function SecuritySettings() {
             </Button>
           </SettingsActions>
         </form>
-      </SettingsCard>
+      </SettingsCard> : null}
 
       <SettingsCard title="Active sessions">
         {sessions.map((session) => (

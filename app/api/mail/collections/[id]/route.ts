@@ -63,7 +63,7 @@ export async function PATCH(
       {
         error: mutationError(
           error,
-          `Unable to rename this ${provider.account.connector === "gmail" ? "label" : "folder"}. Try again.`,
+          "Unable to rename this folder. Try again.",
         ),
       },
       { status: 400 },
@@ -103,12 +103,11 @@ export async function DELETE(
   const { id } = await context.params;
   const accountId = new URL(request.url).searchParams.get("account");
   const provider = await getMailProvider(user, accountId);
-  const term = provider.account.connector === "gmail" ? "label" : "folder";
   try {
     const deleted = await provider.deleteCollection(id);
     if (!deleted) {
       return NextResponse.json(
-        { error: term === "label" ? "Label not found." : "Folder not found." },
+        { error: "Folder not found." },
         { status: 404 },
       );
     }
@@ -117,7 +116,7 @@ export async function DELETE(
       {
         error: mutationError(
           error,
-          `Unable to delete this ${term}. Try again.`,
+          "Unable to delete this folder. Try again.",
         ),
       },
       { status: 400 },

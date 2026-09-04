@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     template: "%s · Remail",
   },
   description: "A design-first open-source mail provider.",
+  icons: { icon: "/logo.png" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -28,7 +28,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "Remail is an email client and mail service. It can connect to Gmail so you can read, search, organize, draft, and send mail, and it can provide mailboxes for domains you control. Features may differ between the hosted service, demo mode, and self-hosted open-source software.",
+          "Remail is an email client and mail service for domains you control. Features may differ between the hosted service, demo mode, and self-hosted open-source software.",
       },
     ],
   },
@@ -47,16 +47,15 @@ const sections: LegalSectionContent[] = [
     ],
   },
   {
-    title: "Google and other third-party services",
+    title: "Third-party services",
     blocks: [
       {
         type: "paragraph",
         content: (
           <>
-            Gmail connection is optional. If you connect it, your use of Google
-            services remains subject to Google&apos;s terms and policies. Remail
-            accesses Google data only after you authorize it and as described in
-            the <LegalLink href="/privacy">Privacy policy</LegalLink>. Third-party
+            If you use Google sign-in, your use of Google services remains subject
+            to Google&apos;s terms and policies. Remail uses identity data as described
+            in the <LegalLink href="/privacy">Privacy policy</LegalLink>. Third-party
             services may change, suspend, or stop their APIs, which can affect
             Remail features.
           </>
@@ -124,7 +123,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "You may stop using Remail, disconnect Gmail, or delete your account at any time. Remail may suspend or terminate access when reasonably necessary to address a violation of these terms, security risk, abuse, legal requirement, nonpayment for a paid feature, or harm to the service or others. Where practical, we will provide notice and an opportunity to resolve the issue.",
+          "You may stop using Remail or delete your account at any time. Remail may suspend or terminate access when reasonably necessary to address a violation of these terms, security risk, abuse, legal requirement, nonpayment for a paid feature, or harm to the service or others. Where practical, we will provide notice and an opportunity to resolve the issue.",
       },
     ],
   },
@@ -185,7 +184,7 @@ export default function TermsPage() {
       intro={
         <p>
           These terms explain the rules for using Remail&apos;s hosted website,
-          account, Gmail connector, and custom-domain mail service.
+          account and custom-domain mail service.
         </p>
       }
       sections={sections}

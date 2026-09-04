@@ -25,7 +25,7 @@ export type MailCollection = {
 export type MailCollectionViewId = `collection:${string}`;
 export type MailViewId = MailFolderId | MailCollectionViewId;
 
-export type MailConnectorId = "hosted" | "gmail";
+export type MailConnectorId = "hosted";
 
 export type MailCapability =
   | "read"
@@ -130,6 +130,7 @@ export type ThreadDetail = Thread & {
 };
 
 export type ComposeInput = {
+  from?: string;
   to: string;
   cc?: string;
   bcc?: string;

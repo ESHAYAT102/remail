@@ -1,25 +1,18 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "@/components/ui/button";
-import { Icons } from "@/components/ui/icons";
-import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
+import { colors, fonts, radius, space } from "@/theme/tokens.stylex";
 import { authClient } from "@/lib/auth-client";
-import { getGmailAuthorizationOptions } from "@/lib/google/oauth";
 import type { DomainSetup } from "@/lib/mail/types";
 
 const steps = ["domain", "resend", "name"] as const;
 type CustomDomainStep = (typeof steps)[number];
-type Step = "provider" | CustomDomainStep;
+type Step = CustomDomainStep;
 
 const copy: Record<Step, { title: string; lead: string }> = {
-  provider: {
-    title: "How do you want to use Remail?",
-    lead: "Connect Gmail or set up email on a domain you own.",
-  },
   domain: {
     title: "What domain should receive mail?",
     lead: "Enter a domain you already own.",
@@ -140,75 +133,6 @@ const styles = stylex.create({
     flexDirection: "column",
     gap: space[3],
   },
-  providerList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: space[2],
-  },
-  providerChoice: {
-    display: "flex",
-    alignItems: "center",
-    gap: space[3],
-    width: "100%",
-    minHeight: 76,
-    padding: space[3],
-    borderWidth: 0,
-    borderRadius: radius.xl,
-    backgroundColor: colors.surfaceGlass,
-    backgroundImage: colors.raised,
-    backdropFilter: "blur(16px)",
-    boxShadow: elevation.control,
-    color: colors.text,
-    cursor: "pointer",
-    fontFamily: "inherit",
-    textAlign: "start",
-    ":disabled": { opacity: 0.45, cursor: "not-allowed" },
-    ":active:not(:disabled)": { transform: "scale(0.96)" },
-    ":focus-visible": {
-      outlineWidth: 2,
-      outlineStyle: "solid",
-      outlineColor: colors.text,
-      outlineOffset: 2,
-    },
-    "@media (prefers-reduced-motion: no-preference)": {
-      transitionProperty: "box-shadow, transform",
-      transitionDuration: "150ms",
-      transitionTimingFunction: "ease-out",
-    },
-    "@media (hover: hover)": {
-      ":hover:not(:disabled)": { boxShadow: elevation.lift },
-    },
-  },
-  providerIcon: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    width: 40,
-    height: 40,
-    flexShrink: 0,
-    borderRadius: radius.lg,
-    color: colors.textMuted,
-  },
-  providerLogo: {
-    display: "block",
-  },
-  providerDetails: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-    minWidth: 0,
-  },
-  providerTitle: {
-    fontSize: fonts.uiSize,
-    lineHeight: fonts.uiLine,
-    fontWeight: 600,
-  },
-  providerDescription: {
-    color: colors.textMuted,
-    fontSize: fonts.captionSize,
-    lineHeight: fonts.captionLine,
-    textWrap: "pretty",
-  },
   switch: {
     borderWidth: 0,
     backgroundColor: "transparent",
@@ -247,21 +171,17 @@ export function Onboarding({
   authenticated,
   addingAccount = false,
   demoMode,
-  googleEnabled,
   initialError,
   initialName,
 }: {
   authenticated: boolean;
   addingAccount?: boolean;
   demoMode: boolean;
-  googleEnabled: boolean;
   initialError?: string;
   initialName?: string;
 }) {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(
-    googleEnabled ? "provider" : "domain",
-  );
+  const [step, setStep] = useState<Step>("domain");
   const [name, setName] = useState(initialName ?? "");
   const [password, setPassword] = useState("");
   const [accountEmail, setAccountEmail] = useState("");
@@ -273,7 +193,7 @@ export function Onboarding({
   const [invalid, setInvalid] = useState(false);
   const [accountReady, setAccountReady] = useState(!addingAccount);
 
-  const index = step === "provider" ? -1 : steps.indexOf(step);
+  const index = steps.indexOf(step);
   const text = copy[step];
 
   const go = (next: Step) => {
@@ -283,37 +203,11 @@ export function Onboarding({
   };
 
   const back = () => {
-    if (step === "provider") {
-      router.push(addingAccount ? "/?add=account" : "/");
-      return;
-    }
     if (index === 0) {
-      if (googleEnabled) go("provider");
-      else router.push("/");
+      router.push("/");
       return;
     }
     go(steps[index - 1]);
-  };
-
-  const startGmail = async () => {
-    if (!googleEnabled || busy || !accountReady) return;
-    setBusy(true);
-    setError("");
-    try {
-      const options = getGmailAuthorizationOptions(
-        addingAccount
-          ? "/onboarding?add=account&auth=gmail"
-          : "/onboarding?auth=gmail",
-      );
-      const result = authenticated
-        ? await authClient.linkSocial(options)
-        : await authClient.signIn.social(options);
-      if (!result.error) return;
-    } catch {
-      // Keep failed popup and network starts recoverable in place.
-    }
-    setBusy(false);
-    setError("Unable to connect Gmail. Check your connection and try again.");
   };
 
   const onSubmit = async (event: React.FormEvent) => {
@@ -486,9 +380,7 @@ export function Onboarding({
         <div {...stylex.props(styles.meta)}>
           <div {...stylex.props(styles.mark)}>Remail</div>
           <div {...stylex.props(styles.progress)}>
-            {step === "provider"
-              ? "Choose email"
-              : `Step ${index + 1} of ${steps.length}`}
+            {`Step ${index + 1} of ${steps.length}`}
           </div>
         </div>
         <div {...stylex.props(styles.copy)}>
@@ -496,76 +388,7 @@ export function Onboarding({
           <p {...stylex.props(styles.lead)}>{text.lead}</p>
         </div>
 
-        {step === "provider" ? (
-          <div {...stylex.props(styles.form)}>
-            <div {...stylex.props(styles.providerList)}>
-              {googleEnabled ? (
-                <button
-                  type="button"
-                  disabled={busy || !accountReady}
-                  onClick={startGmail}
-                  {...stylex.props(styles.providerChoice)}
-                >
-                  <span {...stylex.props(styles.providerIcon)}>
-                    <Image
-                      src="/providers/gmail.svg"
-                      alt=""
-                      width={24}
-                      height={19}
-                      unoptimized
-                      {...stylex.props(styles.providerLogo)}
-                    />
-                  </span>
-                  <span {...stylex.props(styles.providerDetails)}>
-                    <span {...stylex.props(styles.providerTitle)}>
-                      {busy ? "Opening Google…" : "Connect Gmail"}
-                    </span>
-                    <span {...stylex.props(styles.providerDescription)}>
-                      Use your Google account to read, send, and organize Gmail.
-                    </span>
-                  </span>
-                </button>
-              ) : null}
-              <button
-                type="button"
-                disabled={busy || !accountReady}
-                onClick={() => go("domain")}
-                {...stylex.props(styles.providerChoice)}
-              >
-                <span {...stylex.props(styles.providerIcon)}>
-                  <Icons.world size={20} />
-                </span>
-                <span {...stylex.props(styles.providerDetails)}>
-                  <span {...stylex.props(styles.providerTitle)}>
-                    Set up a custom domain
-                  </span>
-                  <span {...stylex.props(styles.providerDescription)}>
-                     Connect Resend to send and receive across a domain you own.
-                  </span>
-                </span>
-              </button>
-            </div>
-            {addingAccount && !accountReady && !error ? (
-              <div role="status" {...stylex.props(styles.hint)}>
-                Preparing account switcher…
-              </div>
-            ) : null}
-            {error ? (
-              <div role="alert" {...stylex.props(styles.error)}>
-                {error}
-              </div>
-            ) : null}
-            <button
-              type="button"
-              disabled={busy}
-              {...stylex.props(styles.switch)}
-              onClick={back}
-            >
-              Sign in instead
-            </button>
-          </div>
-        ) : (
-          <form {...stylex.props(styles.form)} onSubmit={onSubmit}>
+        <form {...stylex.props(styles.form)} onSubmit={onSubmit}>
             {step === "domain" ? (
               <Field id="onboard-domain" label="Domain">
                 <input
@@ -678,8 +501,7 @@ export function Onboarding({
                 Back
               </button>
             </div>
-          </form>
-        )}
+        </form>
       </div>
     </main>
   );

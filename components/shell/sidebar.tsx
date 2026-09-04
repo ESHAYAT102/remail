@@ -332,12 +332,9 @@ export function Sidebar({
 }) {
   const composeSx = stylex.props(styles.compose);
   const [createOpen, setCreateOpen] = useState(false);
-  const collectionKind = account.connector === "gmail" ? "label" : "folder";
-  const collectionTitle = collectionKind === "label" ? "Labels" : "Folders";
-  const identity =
-    account.connector === "hosted"
-      ? account.email.split("@").at(-1) ?? account.email
-      : account.email;
+  const collectionKind = "folder" as const;
+  const collectionTitle = "Folders";
+  const identity = account.email.split("@").at(-1) ?? account.email;
   return (
     <>
       <aside {...stylex.props(styles.root)}>
@@ -348,7 +345,7 @@ export function Sidebar({
               render={
                 <button
                   type="button"
-                  aria-label={account.connector === "hosted" ? `Domain inbox, ${identity}` : `Email account, ${identity}`}
+                  aria-label={`Domain inbox, ${identity}`}
                   {...stylex.props(styles.account)}
                 >
                   <MailAccountIcon connector={account.connector} />
@@ -399,7 +396,7 @@ export function Sidebar({
                 key={item.id}
                 label={item.label}
                 icon={<Icon size={15} />}
-                meta={folderCounts[item.id]}
+                meta={folderCounts[item.id] || undefined}
                 active={folder === item.id}
                 href={mailFolderHref(item.id, undefined, account.id)}
                 dropTarget={systemDropTarget(item.id, account, folder)}
@@ -438,7 +435,7 @@ export function Sidebar({
                     />
                   )
                 }
-                meta={collection.total}
+                meta={collection.unread || undefined}
                 active={folder === view}
                 href={mailFolderHref(view, undefined, account.id)}
                 dropTarget={{

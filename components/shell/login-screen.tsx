@@ -312,7 +312,7 @@ export function LoginScreen({
           <p {...stylex.props(styles.lead)}>
             {addingAccount
               ? "Sign in to another Remail account. Your current account will stay available on this device."
-              : "Bring Gmail or host mailboxes on a domain you control, then read and send from one quiet inbox."}
+              : "Host mailboxes on a domain you control, then read and send from one quiet inbox."}
           </p>
         </div>
         <LoginForm

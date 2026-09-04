@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { consumeComposeAttachments } from "@/lib/data/compose-attachments";
 import { composeFromRequest } from "@/lib/mail/compose";
 import { hasAuthoredComposeContent } from "@/lib/mail/composer-footer";
 import { MailError } from "@/lib/mail/errors";
@@ -10,8 +11,11 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const input = await composeFromRequest(request);
-    const accountId = new URL(request.url).searchParams.get("account");
+    const { input, attachmentUploadIds } = await composeFromRequest(request);
+    const accountId = new URL(request.url).searchParams.get("account") ?? "";
+    if (attachmentUploadIds.length) {
+      input.attachments = await consumeComposeAttachments(user, accountId, attachmentUploadIds);
+    }
     if (!input.to) {
       return NextResponse.json({ error: "Add a recipient." }, { status: 400 });
     }
@@ -29,9 +33,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
     console.error("mail/send", error);
-    return NextResponse.json(
-      { error: "Unable to send. Check the address and try again." },
-      { status: 400 },
-    );
+    const message =
+      error instanceof Error ? error.message : "Unable to send. Check the address and try again.";
+    return NextResponse.json({ error: message }, { status: 400 });
   }
 }

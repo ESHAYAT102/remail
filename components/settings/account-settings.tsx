@@ -51,7 +51,7 @@ const styles = stylex.create({
   },
 });
 
-export function AccountSettings() {
+export function AccountSettings({ hasPassword }: { hasPassword: boolean }) {
   const router = useRouter();
   const { sessionUser, updateUser } = useMailShell();
   const [name, setName] = useState(sessionUser.name);
@@ -163,13 +163,15 @@ export function AccountSettings() {
         </SettingsCard>
         <Dialog.Portal>
           <Dialog.Backdrop />
-          <Dialog.Popup initialFocus={passwordRef}>
+          <Dialog.Popup initialFocus={hasPassword ? passwordRef : undefined}>
             <form
               {...stylex.props(styles.dialogForm)}
               onSubmit={async (event) => {
                 event.preventDefault();
                 const form = new FormData(event.currentTarget);
-                const password = String(form.get("password") ?? "");
+                  const password = hasPassword
+                    ? String(form.get("password") ?? "")
+                    : undefined;
                 setDeleteBusy(true);
                 setDeleteStatus("");
                 let deletionSucceeded = false;
@@ -188,8 +190,10 @@ export function AccountSettings() {
                   if (!deletionSucceeded) {
                     setDeleteBusy(false);
                     requestAnimationFrame(() => {
-                      passwordRef.current?.focus();
-                      passwordRef.current?.select();
+                      if (hasPassword) {
+                        passwordRef.current?.focus();
+                        passwordRef.current?.select();
+                      }
                     });
                   }
                 }
@@ -200,7 +204,7 @@ export function AccountSettings() {
                 This permanently deletes your Remail account, messages, custom domains,
                 and settings. This can’t be undone.
               </Dialog.Description>
-              <div {...stylex.props(styles.dialogField)}>
+              {hasPassword ? <div {...stylex.props(styles.dialogField)}>
                 <label htmlFor="delete-account-password" {...stylex.props(styles.dialogLabel)}>
                   Password
                 </label>
@@ -217,7 +221,7 @@ export function AccountSettings() {
                   className={settingsControlClass.className}
                   style={settingsControlClass.style}
                 />
-              </div>
+              </div> : null}
               <div {...stylex.props(styles.dialogStatus)}>
                 <SettingsStatus
                   id="delete-account-error"

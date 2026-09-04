@@ -323,6 +323,7 @@ function ThreadRow({
   canStar,
   canTrash,
   selected,
+  keyboardActive,
   onSelect,
   dragEnabled,
   onDragPointerDown,
@@ -343,6 +344,7 @@ function ThreadRow({
   canStar: boolean;
   canTrash: boolean;
   selected: boolean;
+  keyboardActive: boolean;
   onSelect: (id: string, range: boolean) => void;
   dragEnabled: boolean;
   onDragPointerDown: React.PointerEventHandler<HTMLAnchorElement>;
@@ -350,14 +352,22 @@ function ThreadRow({
   reduceMotion: boolean;
 }) {
   const isPresent = useIsPresent();
+  const rowRef = useRef<HTMLDivElement>(null);
   const [hot, setHot] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const showActions = hot || menuOpen;
   const title = `${thread.from.name || thread.from.email}: ${thread.subject}`;
   const actionTab = showActions ? 0 : -1;
 
+  useEffect(() => {
+    if (keyboardActive) {
+      rowRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [keyboardActive]);
+
   return (
     <motion.div
+      ref={rowRef}
       data-selected={selected || undefined}
       inert={isPresent ? undefined : true}
       animate={{ height: "auto", opacity: 1, scale: 1 }}
@@ -377,7 +387,7 @@ function ThreadRow({
       }}
       {...stylex.props(
         styles.row,
-        showActions && styles.rowHot,
+        (showActions || keyboardActive) && styles.rowHot,
         selected && styles.rowSelected,
       )}
     >
@@ -600,6 +610,7 @@ export function ThreadList({
   density = "comfortable",
   messagePreview = "one",
   selectedThreadIds,
+  keyboardActiveThreadId,
   onSelectionChange,
   onSelectionTargetsChange,
   selectionResetKey,
@@ -630,6 +641,7 @@ export function ThreadList({
   density?: DensityPreference;
   messagePreview?: MessagePreviewPreference;
   selectedThreadIds: ReadonlySet<string>;
+  keyboardActiveThreadId?: string | null;
   onSelectionChange: (selectedIds: Set<string>) => void;
   onSelectionTargetsChange: (targets: ThreadSelectionTargets) => void;
   selectionResetKey: number;
@@ -805,6 +817,7 @@ export function ThreadList({
             canStar={account.capabilities.includes("star")}
             canTrash={account.capabilities.includes("trash")}
             selected={selectedThreadIds.has(thread.id)}
+            keyboardActive={keyboardActiveThreadId === thread.id}
             onSelect={selectThread}
             dragEnabled={
               selectedThreadIds.has(thread.id) && !bulkActionRequest

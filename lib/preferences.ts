@@ -13,6 +13,8 @@ export type UserPreferences = {
   includeRedaktFooter: boolean;
   singleKeyShortcuts: boolean;
   messagePreview: MessagePreviewPreference;
+  defaultSenderAlias: string;
+  defaultFolder: MailViewId;
 };
 
 export const defaultUserPreferences: UserPreferences = {
@@ -22,6 +24,8 @@ export const defaultUserPreferences: UserPreferences = {
   includeRedaktFooter: true,
   singleKeyShortcuts: true,
   messagePreview: "one",
+  defaultSenderAlias: "",
+  defaultFolder: "inbox",
 };
 
 function includes<T extends string>(values: readonly T[], value: unknown): value is T {
@@ -53,6 +57,15 @@ export function normalizeUserPreferences(
     messagePreview: includes(messagePreviewPreferences, value?.messagePreview)
       ? value.messagePreview
       : defaultUserPreferences.messagePreview,
+    defaultSenderAlias:
+      typeof value?.defaultSenderAlias === "string" &&
+      (!value.defaultSenderAlias || isValidSenderAlias(value.defaultSenderAlias))
+        ? normalizeSenderAlias(value.defaultSenderAlias)
+        : defaultUserPreferences.defaultSenderAlias,
+    defaultFolder:
+      typeof value?.defaultFolder === "string" && isMailView(value.defaultFolder)
+        ? value.defaultFolder
+        : defaultUserPreferences.defaultFolder,
   };
 }
 
@@ -69,6 +82,8 @@ export function parseUserPreferencesPatch(value: unknown): Partial<UserPreferenc
     "includeRedaktFooter",
     "singleKeyShortcuts",
     "messagePreview",
+    "defaultSenderAlias",
+    "defaultFolder",
   ]);
   if (Object.keys(input).some((key) => !allowed.has(key as keyof UserPreferences))) {
     throw new Error("Choose a valid setting.");
@@ -109,7 +124,25 @@ export function parseUserPreferencesPatch(value: unknown): Partial<UserPreferenc
     }
     patch.messagePreview = input.messagePreview;
   }
+  if ("defaultSenderAlias" in input) {
+    if (typeof input.defaultSenderAlias !== "string") {
+      throw new Error("Enter a valid sender alias.");
+    }
+    const alias = normalizeSenderAlias(input.defaultSenderAlias);
+    if (alias && !isValidSenderAlias(alias)) {
+      throw new Error("Use only characters valid before the @ sign.");
+    }
+    patch.defaultSenderAlias = alias;
+  }
+  if ("defaultFolder" in input) {
+    if (typeof input.defaultFolder !== "string" || !isMailView(input.defaultFolder)) {
+      throw new Error("Choose a valid default folder.");
+    }
+    patch.defaultFolder = input.defaultFolder;
+  }
 
   if (Object.keys(patch).length === 0) throw new Error("Choose a setting to update.");
   return patch;
 }
+import { isValidSenderAlias, normalizeSenderAlias } from "./mail/sender-aliases.ts";
+import { isMailView, type MailViewId } from "./mail/routes.ts";

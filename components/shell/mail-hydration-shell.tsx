@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { MailShellLoading } from "./mail-shell-loading";
 
+const SHELL_TIMEOUT_MS = 8_000;
+
 export function MailHydrationShell() {
   const [ready, setReady] = useState(false);
 
@@ -15,13 +17,19 @@ export function MailHydrationShell() {
       return () => cancelAnimationFrame(readyFrame);
     }
 
+    const timeout = setTimeout(() => setReady(true), SHELL_TIMEOUT_MS);
+
     const observer = new MutationObserver(() => {
       if (!hasRenderedShell()) return;
+      clearTimeout(timeout);
       observer.disconnect();
       setReady(true);
     });
     observer.observe(document.body, { childList: true });
-    return () => observer.disconnect();
+    return () => {
+      clearTimeout(timeout);
+      observer.disconnect();
+    };
   }, []);
 
   return ready ? null : <MailShellLoading />;

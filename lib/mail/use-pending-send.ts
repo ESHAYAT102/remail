@@ -19,7 +19,7 @@ export type PendingSend = {
 };
 
 export type PendingSendOptions = {
-  buildBody: (input: ComposeInput, files: File[]) => FormData;
+  buildBody: (input: ComposeInput, files: File[]) => FormData | Promise<FormData>;
   endpoint: string;
   onDelivered: (pending: PendingSend, result: SendResult) => void | Promise<void>;
   onFailed?: (pending: PendingSend, error: string) => void;
@@ -111,13 +111,15 @@ export function createPendingSendController(
     if (!sending) return false;
 
     let response: SendResponse | null = null;
+    let requestError = "";
     try {
       response = await request(options.endpoint, {
         method: "POST",
-        body: options.buildBody(sending.input, sending.files),
+        body: await options.buildBody(sending.input, sending.files),
       });
-    } catch {
+    } catch (error) {
       response = null;
+      requestError = error instanceof Error ? error.message : "";
     }
 
     if (!response?.ok) {
@@ -128,7 +130,9 @@ export function createPendingSendController(
       } catch {
         payload = null;
       }
-      const error = payload?.error ?? "Unable to send. Check your connection and try again.";
+      const error =
+        (payload?.error || requestError) ||
+        "Unable to send. Check your connection and try again.";
       const failed = update(id, { status: "failed", error });
       if (failed) options.onFailed?.(failed, error);
       return false;
@@ -213,7 +217,8 @@ export function createPendingSendController(
   const flush = (sendBeacon: (url: string, body: FormData) => boolean) => {
     for (const item of queued.values()) {
       if (item.status !== "queued") continue;
-      sendBeacon(options.endpoint, options.buildBody(item.input, item.files));
+      const body = options.buildBody(item.input, item.files);
+      if (body instanceof FormData) sendBeacon(options.endpoint, body);
     }
     for (const id of timers.keys()) clearDeliveryTimer(id);
     queued.clear();

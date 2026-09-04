@@ -41,6 +41,9 @@ const styles = stylex.create({
     backgroundColor: colors.surface,
     boxShadow: elevation.control,
   },
+  cardOverflowVisible: {
+    overflow: "visible",
+  },
   cardHeader: {
     paddingInline: space[5],
     "@media (max-width: 640px)": { paddingInline: space[4] },
@@ -261,16 +264,20 @@ export function SettingsPage({
 export function SettingsCard({
   title,
   children,
+  overflowVisible = false,
 }: {
   title: string;
   children: React.ReactNode;
+  overflowVisible?: boolean;
 }) {
   return (
     <section {...stylex.props(styles.cardGroup)}>
       <header {...stylex.props(styles.cardHeader)}>
         <h2 {...stylex.props(styles.cardTitle)}>{title}</h2>
       </header>
-      <div {...stylex.props(styles.card)}>{children}</div>
+      <div {...stylex.props(styles.card, overflowVisible && styles.cardOverflowVisible)}>
+        {children}
+      </div>
     </section>
   );
 }

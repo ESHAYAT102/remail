@@ -107,7 +107,7 @@ const featured: ThreadDetail[] = [
 <ul>
   <li>Setup takes about ten minutes, most of which is waiting for DNS to propagate.</li>
   <li>We don't have a mobile app yet. The web client works on a phone, but it's not the focus.</li>
-  <li>Import from Gmail and Fastmail is in testing. If you need it now, reply and we'll run it manually for you.</li>
+  <li>Domain-wide receiving keeps every address together in one inbox.</li>
 </ul>
 <p>Open <a href="https://github.com">the repository</a> if you'd rather read the code before you trust it with your mail. Everything except the hosted billing layer is open source.</p>
 <p>Thanks for waiting this long.</p>

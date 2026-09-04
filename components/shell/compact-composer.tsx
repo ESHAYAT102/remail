@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Icons } from "@/components/ui/icons";
 import {
@@ -463,6 +464,7 @@ export function CompactComposer({
   const [files, setFiles] = useState<File[]>([]);
   const [entered, setEntered] = useState(!animateEntrance);
   const [sendError, setSendError] = useState("");
+  const [discardOpen, setDiscardOpen] = useState(false);
 
   const editDraft = (patch: Partial<ComposeInput>) => {
     setSendError("");
@@ -492,8 +494,8 @@ export function CompactComposer({
   );
 
   const discard = () => {
-    if (dirty && !window.confirm("Discard this draft?")) return;
-    onClose();
+    if (dirty) setDiscardOpen(true);
+    else onClose();
   };
 
   const submit = async () => {
@@ -513,6 +515,14 @@ export function CompactComposer({
 
   return (
     <div {...stylex.props(styles.card, entered ? styles.cardIn : styles.cardEnter)}>
+      <ConfirmDialog
+        open={discardOpen}
+        title="Discard draft?"
+        description="This draft and its attachments will be permanently deleted."
+        confirmLabel="Discard draft"
+        onOpenChange={setDiscardOpen}
+        onConfirm={onClose}
+      />
       <div {...stylex.props(styles.heading)}>{heading}</div>
       <AddressField
         id="reply-to"

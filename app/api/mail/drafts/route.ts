@@ -18,7 +18,7 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const input = await composeFromRequest(request);
+    const { input } = await composeFromRequest(request);
     const result = await provider.saveDraft({ ...input, id: input.draftId });
     return NextResponse.json(result);
   } catch (error) {

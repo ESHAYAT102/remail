@@ -24,23 +24,6 @@ const definitions: Record<MailConnectorId, MailConnectorDefinition> = {
       "sort",
     ],
   },
-  gmail: {
-    id: "gmail",
-    label: "Gmail",
-    capabilities: [
-      "read",
-      "send",
-      "drafts",
-      "markUnread",
-      "star",
-      "archive",
-      "spam",
-      "trash",
-      "attachments",
-      "collections",
-      "pushSync",
-    ],
-  },
 };
 
 export function getMailConnectorDefinition(connector: MailConnectorId) {

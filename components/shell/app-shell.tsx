@@ -66,6 +66,7 @@ import {
   collectionIdFromView,
   mailFolderHref,
   mailRouteFromPathname,
+  mailSettingsHref,
   mailThreadHref,
   isMailFolder,
   mailFolderIds,
@@ -87,7 +88,7 @@ import { usePendingSend, type PendingSend } from "@/lib/mail/use-pending-send";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { MobileNav } from "./mobile-nav";
 import { PaneHeader } from "./pane-header";
-import { Sidebar } from "./sidebar";
+import { mailFoldersForAccount, Sidebar } from "./sidebar";
 import { StandaloneComposer } from "./standalone-composer";
 import {
   WorkspaceTabs,
@@ -359,8 +360,9 @@ export function useMailShell() {
   return context;
 }
 
-function composeBody(input: ComposeInput, files: File[]) {
+function composeFields(input: ComposeInput) {
   const form = new FormData();
+  if (input.from) form.set("from", input.from);
   form.set("to", input.to);
   form.set("cc", input.cc ?? "");
   form.set("bcc", input.bcc ?? "");
@@ -370,8 +372,46 @@ function composeBody(input: ComposeInput, files: File[]) {
   if (input.inReplyTo) form.set("inReplyTo", input.inReplyTo);
   if (input.threadId) form.set("threadId", input.threadId);
   if (input.draftId) form.set("draftId", input.draftId);
-  for (const file of files) form.append("files", file);
   return form;
+}
+
+function composeBody(input: ComposeInput, files: File[], accountId: string) {
+  const form = composeFields(input);
+  if (files.length === 0) return form;
+  return uploadComposeAttachments(files, accountId).then((uploadIds) => {
+    form.set("attachmentUploadIds", uploadIds.join(","));
+    return form;
+  });
+}
+
+async function uploadComposeAttachments(files: File[], accountId: string) {
+  const chunkSize = 1024 * 1024;
+  const uploadIds: string[] = [];
+  for (const file of files) {
+    const uploadId = crypto.randomUUID();
+    uploadIds.push(uploadId);
+    for (let offset = 0, chunk = 0; offset < file.size || (file.size === 0 && chunk === 0); offset += chunkSize, chunk += 1) {
+      const response = await fetch(
+        `/api/mail/attachment-uploads?account=${encodeURIComponent(accountId)}&upload=${uploadId}&chunk=${chunk}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/octet-stream",
+            "X-File-Name": encodeURIComponent(file.name),
+            "X-File-Type": file.type || "application/octet-stream",
+            "X-File-Size": String(file.size),
+          },
+          body: file.slice(offset, Math.min(file.size, offset + chunkSize)),
+        },
+      );
+      if (!response.ok) {
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(payload?.error ?? `Unable to upload ${file.name}.`);
+      }
+      if (file.size === 0) break;
+    }
+  }
+  return uploadIds;
 }
 
 function threadTabId(accountId: string, threadId: string) {
@@ -621,40 +661,6 @@ export function AppShell({
     };
   }, [pathname]);
 
-  useEffect(() => {
-    if (account.connector !== "gmail" || account.status !== "connected") return;
-    let active = true;
-    let revision = account.syncRevision;
-
-    const sync = async () => {
-      if (!active || document.visibilityState === "hidden") return;
-      const response = await fetch(
-        `/api/mail/accounts/${encodeURIComponent(account.id)}/sync`,
-        { method: "POST" },
-      ).catch(() => null);
-      if (!active || !response?.ok) return;
-      const result = (await response.json()) as { revision?: number };
-      if (typeof result.revision !== "number" || result.revision <= revision) {
-        return;
-      }
-      revision = result.revision;
-      router.refresh();
-    };
-
-    const initial = window.setTimeout(() => void sync(), 5_000);
-    const interval = window.setInterval(() => void sync(), 30_000);
-    const onVisibility = () => {
-      if (document.visibilityState === "visible") void sync();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => {
-      active = false;
-      window.clearTimeout(initial);
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", onVisibility);
-    };
-  }, [account.connector, account.id, account.status, account.syncRevision, router]);
-
   const {
     pending,
     queue: queueSend,
@@ -663,7 +669,7 @@ export function AppShell({
     settle: settlePendingSend,
   } = usePendingSend({
     endpoint: `/api/mail/send?account=${encodeURIComponent(account.id)}`,
-    buildBody: composeBody,
+    buildBody: (input, files) => composeBody(input, files, account.id),
     onDelivered: async (item) => {
       if (item.input.inReplyTo) {
         router.refresh();
@@ -762,13 +768,41 @@ export function AppShell({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.code === "Comma") {
+        event.preventDefault();
+        router.push(mailSettingsHref("account"));
+        return;
+      }
       if (event.altKey && event.code === "KeyN") {
         event.preventDefault();
         compose();
         return;
       }
-      if ((event.metaKey || event.ctrlKey) && event.code === "KeyW") {
-        if (activeId === FOLDER_TAB_ID) return;
+      if (
+        preferences.singleKeyShortcuts &&
+        !isTyping(event) &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        /^(Digit|Numpad)[1-9]$/.test(event.code)
+      ) {
+        const index = Number(event.code.slice(-1)) - 1;
+        const destination = mailFoldersForAccount(account)[index];
+        if (destination) {
+          event.preventDefault();
+          router.push(mailFolderHref(destination.id, undefined, account.id));
+        }
+        return;
+      }
+      if (
+        preferences.singleKeyShortcuts &&
+        event.key.toLowerCase() === "w" &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !isTyping(event) &&
+        activeId !== FOLDER_TAB_ID
+      ) {
         event.preventDefault();
         closeTabs([activeId]);
         return;
@@ -787,7 +821,7 @@ export function AppShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [activeId, closeTabs, compose, preferences.singleKeyShortcuts]);
+  }, [account, activeId, closeTabs, compose, preferences.singleKeyShortcuts, router]);
 
   const context = useMemo<MailShellContextValue>(
     () => ({
@@ -795,7 +829,7 @@ export function AppShell({
       sessionUser: activeUser,
       userEmail: account.email,
       userName:
-        account.connector === "hosted" ? activeUser.name : account.displayName,
+        activeUser.name,
       demoMode,
       preferences,
       collections,
@@ -916,6 +950,12 @@ export function AppShell({
         <StandaloneComposer
           key={`${composerSession}:${composerDraft?.draftId ?? recalled?.id ?? "new"}:${preferences.includeRedaktFooter}`}
           accountId={account.id}
+          senderEmail={
+            preferences.defaultSenderAlias
+              ? `${preferences.defaultSenderAlias}@${account.email.split("@").at(-1)}`
+              : account.email
+          }
+          editableSender
           supportsDrafts={account.capabilities.includes("drafts")}
           open={composeOpen}
           sending={false}
@@ -1047,6 +1087,17 @@ export function FolderRoute({
     },
     [bulkActionRequest, selectedThreadIds, selectionScope],
   );
+  const toggleSelectedUnread = useCallback(() => {
+    if (!account.capabilities.includes("markUnread")) return;
+    const selectedThreads = selectionTargets.items.filter((thread) =>
+      selectedThreadIds.has(thread.id),
+    );
+    if (selectedThreads.length === 0) return;
+    requestBulkAction({
+      type: "unread",
+      unread: !selectedThreads.some((thread) => thread.unread),
+    });
+  }, [account.capabilities, requestBulkAction, selectedThreadIds, selectionTargets]);
   const completeBulkAction = useCallback(
     (id: number, result: ThreadBulkActionResult) => {
       setBulkActionState((current) => {
@@ -1176,6 +1227,7 @@ export function FolderRoute({
         query={query}
         selectedThreadIds={selectedThreadIds}
         onSelectionChange={updateSelection}
+        onToggleSelectedUnread={toggleSelectedUnread}
         onSelectionTargetsChange={updateSelectionTargets}
         selectionResetKey={selectionResetKey}
         bulkActionRequest={bulkActionRequest}
@@ -1192,6 +1244,7 @@ function FolderResults({
   query,
   selectedThreadIds,
   onSelectionChange,
+  onToggleSelectedUnread,
   onSelectionTargetsChange,
   selectionResetKey,
   bulkActionRequest,
@@ -1203,6 +1256,7 @@ function FolderResults({
   query: ThreadListQuery;
   selectedThreadIds: ReadonlySet<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
+  onToggleSelectedUnread: () => void;
   onSelectionTargetsChange: (targets: ThreadSelectionTargets) => void;
   selectionResetKey: number;
   bulkActionRequest: ThreadBulkActionRequest | null;
@@ -1233,6 +1287,9 @@ function FolderResults({
   const [sourcePage, setSourcePage] = useState(initialPage);
   const [loadingMore, setLoadingMore] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [keyboardActiveThreadId, setKeyboardActiveThreadId] = useState<
+    string | null
+  >(null);
   const renderedThreadIds = useMemo(
     () => new Set(threads.map((thread) => thread.id)),
     [threads],
@@ -1273,9 +1330,8 @@ function FolderResults({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
       if (
-        !preferences.singleKeyShortcuts ||
-        (event.key !== "j" && event.key !== "k") ||
         event.altKey ||
         event.ctrlKey ||
         event.metaKey ||
@@ -1283,9 +1339,66 @@ function FolderResults({
       ) {
         return;
       }
-      const thread = event.key === "j" ? threads[0] : threads.at(-1);
-      if (thread) {
-        router.push(mailThreadHref(folder, thread.id, query, account.id));
+
+      if (
+        key === "u" &&
+        preferences.singleKeyShortcuts &&
+        selectedThreadIds.size > 0
+      ) {
+        event.preventDefault();
+        onToggleSelectedUnread();
+        return;
+      }
+
+      const movingDown = key === "j" || event.key === "ArrowDown";
+      const movingUp = key === "k" || event.key === "ArrowUp";
+      if (
+        (movingDown || movingUp) &&
+        (event.key.startsWith("Arrow") || preferences.singleKeyShortcuts)
+      ) {
+        if (threads.length === 0) return;
+        event.preventDefault();
+        setKeyboardActiveThreadId((currentId) => {
+          const currentIndex = threads.findIndex(
+            (thread) => thread.id === currentId,
+          );
+          const nextIndex =
+            currentIndex < 0
+              ? movingDown
+                ? 0
+                : threads.length - 1
+              : Math.max(
+                  0,
+                  Math.min(
+                    threads.length - 1,
+                    currentIndex + (movingDown ? 1 : -1),
+                  ),
+                );
+          return threads[nextIndex]?.id ?? null;
+        });
+        return;
+      }
+
+      if (
+        keyboardActiveThreadId &&
+        (event.key === "Enter" || event.key === " ") &&
+        !(event.target instanceof Element &&
+          event.target.closest("a, button, input, select, textarea"))
+      ) {
+        event.preventDefault();
+        if (event.key === " ") {
+          const next = new Set(selectedThreadIds);
+          if (next.has(keyboardActiveThreadId)) {
+            next.delete(keyboardActiveThreadId);
+          } else {
+            next.add(keyboardActiveThreadId);
+          }
+          onSelectionChange(next);
+        } else {
+          router.push(
+            mailThreadHref(folder, keyboardActiveThreadId, query, account.id),
+          );
+        }
       }
     };
     window.addEventListener("keydown", onKey);
@@ -1293,9 +1406,13 @@ function FolderResults({
   }, [
     account.id,
     folder,
+    keyboardActiveThreadId,
+    onToggleSelectedUnread,
+    onSelectionChange,
     preferences.singleKeyShortcuts,
     query,
     router,
+    selectedThreadIds,
     threads,
   ]);
 
@@ -1354,6 +1471,7 @@ function FolderResults({
             messagePreview={preferences.messagePreview}
             emptyState={emptyState}
             selectedThreadIds={selectedThreadIds}
+            keyboardActiveThreadId={keyboardActiveThreadId}
             onSelectionChange={onSelectionChange}
             onSelectionTargetsChange={onSelectionTargetsChange}
             selectionResetKey={selectionResetKey}
@@ -1425,7 +1543,16 @@ export function ThreadRoute({
   } = useMailShell();
   const [replyMode, setReplyMode] = useState<ReplyMode | null>(null);
   const [animateReplyComposer, setAnimateReplyComposer] = useState(true);
+  const [unreadState, setUnreadState] = useState({
+    threadId: detail.id,
+    unread: detail.unread,
+  });
   const autoReadThread = useRef<string | null>(null);
+  if (unreadState.threadId !== detail.id) {
+    setUnreadState({ threadId: detail.id, unread: detail.unread });
+  }
+  const threadUnread =
+    unreadState.threadId === detail.id ? unreadState.unread : detail.unread;
   const href = mailThreadHref(folder, detail.id, query, account.id);
   const queryString = threadQueryToSearch({
     ...query,
@@ -1477,8 +1604,9 @@ export function ThreadRoute({
   }, [detail.subject]);
 
   useEffect(() => {
-    if (!detail.unread || autoReadThread.current === detail.id) return;
+    if (!threadUnread || autoReadThread.current === detail.id) return;
     autoReadThread.current = detail.id;
+    setUnreadState({ threadId: detail.id, unread: false });
     adjustUnreadCounts(folder, -1);
     void persistThreadUnread(account.id, detail.id, false)
       .then(() => {
@@ -1486,6 +1614,7 @@ export function ThreadRoute({
       })
       .catch(() => {
         autoReadThread.current = null;
+        setUnreadState({ threadId: detail.id, unread: true });
         adjustUnreadCounts(folder, 1);
         updateThreadViewUnread(detail.id, true);
       });
@@ -1493,8 +1622,8 @@ export function ThreadRoute({
     account.id,
     adjustUnreadCounts,
     detail.id,
-    detail.unread,
     folder,
+    threadUnread,
     updateThreadViewUnread,
   ]);
 
@@ -1531,6 +1660,29 @@ export function ThreadRoute({
     [clearRecalled, effectiveReplyMode],
   );
 
+  const toggleThreadUnread = useCallback(() => {
+    const unread = !threadUnread;
+    setUnreadState({ threadId: detail.id, unread });
+    updateThreadViewUnread(detail.id, unread);
+    adjustUnreadCounts(folder, unread ? 1 : -1);
+    void persistThreadUnread(account.id, detail.id, unread)
+      .then(() => {
+        void invalidateMailAccountCache(account.id).catch(() => null);
+      })
+      .catch(() => {
+        setUnreadState({ threadId: detail.id, unread: !unread });
+        updateThreadViewUnread(detail.id, !unread);
+        adjustUnreadCounts(folder, unread ? -1 : 1);
+      });
+  }, [
+    account.id,
+    adjustUnreadCounts,
+    detail.id,
+    folder,
+    threadUnread,
+    updateThreadViewUnread,
+  ]);
+
   const returnToFolder = useCallback(() => {
     window.location.replace(mailFolderHref(folder, query, account.id));
   }, [account.id, folder, query]);
@@ -1546,16 +1698,27 @@ export function ThreadRoute({
       ) {
         return;
       }
-      if (event.key === "r") {
+      const key = event.key.toLowerCase();
+      if (key === "r") {
         event.preventDefault();
         updateReplyMode("reply");
         return;
       }
-      if (event.key !== "j" && event.key !== "k") return;
+      if (key === "f") {
+        event.preventDefault();
+        updateReplyMode("forward");
+        return;
+      }
+      if (key === "u" && account.capabilities.includes("markUnread")) {
+        event.preventDefault();
+        toggleThreadUnread();
+        return;
+      }
+      if (key !== "j" && key !== "k") return;
       event.preventDefault();
       const index = navigationThreads.findIndex((thread) => thread.id === detail.id);
       const nextIndex =
-        event.key === "j"
+        key === "j"
           ? Math.min(navigationThreads.length - 1, index + 1)
           : Math.max(0, index - 1);
       const next = navigationThreads[nextIndex];
@@ -1566,6 +1729,7 @@ export function ThreadRoute({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
+    account.capabilities,
     account.id,
     detail.id,
     folder,
@@ -1573,6 +1737,7 @@ export function ThreadRoute({
     preferences.singleKeyShortcuts,
     query,
     router,
+    toggleThreadUnread,
     updateReplyMode,
   ]);
 

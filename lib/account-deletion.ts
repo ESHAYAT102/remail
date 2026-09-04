@@ -9,14 +9,14 @@ type AccountDeletionResult =
     };
 
 export async function requestAccountDeletion(
-  password: string,
+  password?: string,
   request: typeof fetch = fetch,
 ): Promise<AccountDeletionResult> {
   try {
     const response = await request("/api/settings/account", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify(password ? { password } : {}),
     });
 
     if (response.ok) {

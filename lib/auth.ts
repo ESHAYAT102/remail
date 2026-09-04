@@ -19,6 +19,22 @@ function createAuth() {
 
   return betterAuth({
     baseURL: getAppUrl(),
+    trustedOrigins: (request) => {
+      const origins = [getAppUrl()];
+      if (process.env.NODE_ENV === "production") return origins;
+
+      const origin = request?.headers.get("origin");
+      if (!origin) return origins;
+      try {
+        const url = new URL(origin);
+        if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+          origins.push(url.origin);
+        }
+      } catch {
+        // Better Auth will reject malformed origins.
+      }
+      return origins;
+    },
     database: drizzleAdapter(getDb(), {
       provider: "pg",
       schema,
@@ -26,9 +42,6 @@ function createAuth() {
     account: {
       encryptOAuthTokens: true,
       storeStateStrategy: "database",
-      // A narrow Google sign-in must not replace a Gmail-enabled access token.
-      // Mailbox credentials are refreshed and expanded only by linkSocial.
-      updateAccountOnSignIn: false,
       accountLinking: {
         trustedProviders: ["google"],
         allowDifferentEmails: true,

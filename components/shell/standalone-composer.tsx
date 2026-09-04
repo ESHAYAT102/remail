@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 import * as stylex from "@stylexjs/stylex";
+import { SenderAliasInput } from "@/components/mail/sender-alias-input";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Icons } from "@/components/ui/icons";
 import {
@@ -75,6 +77,9 @@ const styles = stylex.create({
   recipients: {
     flex: 1,
     minWidth: 0,
+    display: "flex",
+    flexDirection: "column",
+    gap: space[2],
   },
   windowActions: {
     display: "flex",
@@ -111,10 +116,26 @@ const styles = stylex.create({
   chips: {
     flex: 1,
     minWidth: 0,
+    minHeight: 40,
     display: "flex",
     flexWrap: "wrap",
     alignItems: "center",
     gap: 6,
+    paddingBlock: space[1],
+    paddingInline: space[3],
+    borderWidth: 1,
+    borderStyle: "solid",
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    ":focus-within": {
+      borderColor: colors.textMuted,
+      outline: "none",
+      boxShadow: "none",
+    },
+    "@media (max-width: 640px)": {
+      minHeight: 44,
+    },
   },
   chip: {
     display: "inline-flex",
@@ -166,8 +187,10 @@ const styles = stylex.create({
     color: colors.text,
     fontFamily: "inherit",
     fontSize: fonts.uiSize,
-    paddingBlock: space[2],
+    minHeight: 30,
+    paddingBlock: space[1],
     outline: "none",
+    ":focus-visible": { outline: "none" },
     "@media (max-width: 640px)": {
       fontSize: "16px",
     },
@@ -332,6 +355,7 @@ function filesFromDraft(input: ComposeInput | null | undefined) {
 
 function draftFingerprint(input: ComposeInput, files: File[]) {
   return JSON.stringify({
+    from: input.from ?? "",
     to: input.to,
     cc: input.cc ?? "",
     bcc: input.bcc ?? "",
@@ -463,6 +487,7 @@ function AddressField({
         ))}
         <input
           id={id}
+          data-border-focus=""
           {...stylex.props(styles.field, styles.placeholder)}
           name={id}
           type="text"
@@ -503,8 +528,36 @@ function AddressField({
   );
 }
 
+function SenderField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const separator = value.lastIndexOf("@");
+  const domain = separator >= 0 ? value.slice(separator + 1) : "";
+  const localPart = separator >= 0 ? value.slice(0, separator) : value;
+
+  return (
+    <div {...stylex.props(styles.row)}>
+      <label htmlFor="compose-from" {...stylex.props(styles.label)}>
+        From
+      </label>
+      <SenderAliasInput
+        id="compose-from"
+        value={localPart}
+        domain={domain}
+        onChange={(alias) => onChange(`${alias}@${domain}`)}
+      />
+    </div>
+  );
+}
+
 export function StandaloneComposer({
   accountId,
+  senderEmail,
+  editableSender,
   supportsDrafts,
   open,
   sending,
@@ -514,6 +567,8 @@ export function StandaloneComposer({
   onSend,
 }: {
   accountId: string;
+  senderEmail: string;
+  editableSender: boolean;
   supportsDrafts: boolean;
   open: boolean;
   sending: boolean;
@@ -528,13 +583,18 @@ export function StandaloneComposer({
   const [expanded, setExpanded] = useState(false);
   const [showCc, setShowCc] = useState(false);
   const initialFiles = filesFromDraft(initial);
-  const [draft, setDraft] = useState<ComposeInput>(initial);
+  const initialDraft = {
+    ...initial,
+    from: editableSender ? initial.from ?? senderEmail : initial.from,
+  };
+  const [draft, setDraft] = useState<ComposeInput>(initialDraft);
   const [files, setFiles] = useState<File[]>(initialFiles);
   const [sendError, setSendError] = useState("");
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"" | "saving" | "saved" | "error">("");
   const [editorVersion, setEditorVersion] = useState(0);
   const draftIdRef = useRef(draft.draftId);
-  const lastSavedRef = useRef(draftFingerprint(initial, initialFiles));
+  const lastSavedRef = useRef(draftFingerprint(initialDraft, initialFiles));
   const saveChain = useRef<Promise<unknown>>(Promise.resolve());
 
   const editDraft = (patch: Partial<ComposeInput>) => {
@@ -552,18 +612,18 @@ export function StandaloneComposer({
   const dirty = Boolean(
     recalled ||
       draft.draftId ||
-      draftFingerprint(draft, files) !== draftFingerprint(initial, initialFiles),
+      draftFingerprint(draft, files) !== draftFingerprint(initialDraft, initialFiles),
   );
 
   const reset = () => {
-    setDraft(initial);
+    setDraft(initialDraft);
     setFiles(initialFiles);
     setShowCc(false);
     setExpanded(false);
     setSendError("");
     setSaveStatus("");
     draftIdRef.current = undefined;
-    lastSavedRef.current = draftFingerprint(initial, initialFiles);
+    lastSavedRef.current = draftFingerprint(initialDraft, initialFiles);
     setEditorVersion((current) => current + 1);
   };
 
@@ -606,7 +666,14 @@ export function StandaloneComposer({
   }, [draft, files, open, saveNow, supportsDrafts]);
 
   const discard = async () => {
-    if (dirty && !window.confirm("Discard this draft?")) return;
+    if (dirty) {
+      setDiscardOpen(true);
+      return;
+    }
+    await discardDraft();
+  };
+
+  const discardDraft = async () => {
     if (supportsDrafts && draftIdRef.current) {
       try {
         await removeDraft(accountId, draftIdRef.current);
@@ -614,11 +681,12 @@ export function StandaloneComposer({
         setSendError(
           error instanceof Error ? error.message : "Unable to discard this draft.",
         );
-        return;
+        return false;
       }
     }
     reset();
     onOpenChange(false);
+    return true;
   };
 
   const submit = async () => {
@@ -656,6 +724,12 @@ export function StandaloneComposer({
           </Dialog.Description>
           <div {...stylex.props(styles.chrome)}>
             <div {...stylex.props(styles.recipients)}>
+              {editableSender ? (
+                <SenderField
+                  value={draft.from ?? senderEmail}
+                  onChange={(from) => editDraft({ from })}
+                />
+              ) : null}
               <AddressField
                 id="compose-to"
                 label="To"
@@ -833,6 +907,14 @@ export function StandaloneComposer({
           </RichTextComposer>
         </Dialog.Popup>
       </Dialog.Portal>
+      <ConfirmDialog
+        open={discardOpen}
+        title="Discard draft?"
+        description="This draft and its attachments will be permanently deleted."
+        confirmLabel="Discard draft"
+        onOpenChange={setDiscardOpen}
+        onConfirm={discardDraft}
+      />
     </Dialog.Root>
   );
 }

@@ -43,6 +43,12 @@ export async function getUserDomain(user: SessionUser, id: string) {
   return rowToDomain(row);
 }
 
+export async function getDomainByName(name: string) {
+  if (isDemoMode()) return null;
+  const [row] = await db().select().from(domains).where(eq(domains.name, name));
+  return row ?? null;
+}
+
 export async function saveUserDomain(user: SessionUser, domain: DomainSetup) {
   if (isDemoMode()) return saveDemoDomain(user.id, domain);
   const required = summarizeRequiredDnsChecks(domain.checks, domain.name);

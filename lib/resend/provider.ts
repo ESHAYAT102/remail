@@ -8,6 +8,7 @@ import {
   hostedMessages,
 } from "@/lib/db/schema";
 import {
+  getDomainByName,
   getUserDomain,
   listUserDomains,
   saveUserDomain,
@@ -202,10 +203,16 @@ export function createResendProvider(
     async getFolderCounts() {
       const rows = await database.select().from(hostedMessages).where(eq(hostedMessages.userId, user.id));
       const empty = { inbox: 0, smart: 0, starred: 0, sent: 0, drafts: 0, spam: 0, trash: 0, archived: 0 };
+      const unreadThreads = new Map<keyof typeof empty, Set<string>>();
       for (const row of rows) {
-        if (row.folder in empty) empty[row.folder as keyof typeof empty]++;
+        if (!row.unread || !(row.folder in empty)) continue;
+        const folder = row.folder as keyof typeof empty;
+        const threads = unreadThreads.get(folder) ?? new Set<string>();
+        threads.add(row.threadId);
+        unreadThreads.set(folder, threads);
       }
-      empty.smart = rows.filter((row) => row.folder === "inbox" && row.unread).length;
+      for (const [folder, threads] of unreadThreads) empty[folder] = threads.size;
+      empty.smart = empty.inbox;
       return empty;
     },
     async listCollections() {
@@ -315,8 +322,13 @@ export function createResendProvider(
     },
     async send(input) {
       const domains = await listUserDomains(user);
-      const owned = domains.find((item) => mailAccount.email.toLowerCase().endsWith(`@${item.name}`));
+      const sender = (input.from ?? mailAccount.email).trim().toLowerCase();
+      const owned = domains.find((item) => sender.endsWith(`@${item.name}`));
       if (!owned) throw new MailError("Finish domain setup before sending mail.");
+      const localPart = sender.slice(0, -(owned.name.length + 1));
+      if (!/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+$/.test(localPart)) {
+        throw new MailError("Enter a valid sender address.");
+      }
       const source = input.inReplyTo
         ? (await database.select().from(hostedMessages).where(and(eq(hostedMessages.userId, user.id), eq(hostedMessages.id, input.inReplyTo))))[0]
         : undefined;
@@ -325,7 +337,7 @@ export function createResendProvider(
         : undefined;
       const resend = await getResend(user.id);
       const result = unwrapResend(await resend.emails.send({
-        from: `${user.name} <${mailAccount.email}>`,
+        from: `${user.name} <${sender}>`,
         to: parseAddressList(input.to).map((item) => item.email),
         cc: parseAddressList(input.cc).map((item) => item.email),
         bcc: parseAddressList(input.bcc).map((item) => item.email),
@@ -341,7 +353,7 @@ export function createResendProvider(
       await database.insert(hostedMessages).values({
         id, userId: user.id, domainId: owned.id, providerEmailId: result.id,
         threadId, direction: "outbound", folder: "sent", unread: false,
-        from: { name: user.name, email: mailAccount.email }, to: parseAddressList(input.to),
+        from: { name: user.name, email: sender }, to: parseAddressList(input.to),
         cc: parseAddressList(input.cc), bcc: parseAddressList(input.bcc), subject: input.subject,
         text: input.text, html: input.html, headers: headers ?? {}, receivedAt: sentAt,
       });
@@ -355,13 +367,27 @@ export function createResendProvider(
       if (!/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/.test(normalized)) {
         throw new MailError("Enter a valid domain name.");
       }
-      const resend = await getResend(user.id);
-      const created = unwrapResend(await resend.domains.create({
-        name: normalized,
-        capabilities: { sending: "enabled", receiving: "enabled" },
-      }));
       const mailbox = `${mailboxLocalPart}@${normalized}`;
-      const setup = domainSetup(created, mailbox);
+      const existing = await getDomainByName(normalized);
+      if (existing && existing.userId !== user.id) {
+        throw new MailError("This domain is already connected to another Remail account.");
+      }
+
+      const resend = await getResend(user.id);
+      let remote;
+      if (existing) {
+        remote = unwrapResend(await resend.domains.get(existing.id));
+      } else {
+        const listed = unwrapResend(await resend.domains.list({ limit: 100 }));
+        const listedDomain = listed.data.find((domain) => domain.name === normalized);
+        remote = listedDomain
+          ? unwrapResend(await resend.domains.get(listedDomain.id))
+          : unwrapResend(await resend.domains.create({
+              name: normalized,
+              capabilities: { sending: "enabled", receiving: "enabled" },
+            }));
+      }
+      const setup = domainSetup(remote, mailbox);
       return saveUserDomain(user, setup);
     },
     async verifyDomain(id) {

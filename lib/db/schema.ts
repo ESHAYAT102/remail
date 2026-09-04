@@ -29,8 +29,34 @@ export const userPreferences = pgTable("user_preferences", {
   includeRedaktFooter: boolean("include_redakt_footer").notNull().default(true),
   singleKeyShortcuts: boolean("single_key_shortcuts").notNull().default(true),
   messagePreview: text("message_preview").notNull().default("one"),
+  defaultSenderAlias: text("default_sender_alias").notNull().default(""),
+  defaultFolder: text("default_folder").notNull().default("inbox"),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+export const composeAttachmentChunks = pgTable(
+  "compose_attachment_chunks",
+  {
+    uploadId: text("upload_id").notNull(),
+    chunkIndex: integer("chunk_index").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accountId: text("account_id").notNull(),
+    filename: text("filename").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    data: text("data").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("compose_attachment_chunk_unique").on(
+      table.uploadId,
+      table.chunkIndex,
+    ),
+    index("compose_attachment_chunk_user_idx").on(table.userId),
+  ],
+);
 
 export const session = pgTable("session", {
   id: text("id").primaryKey(),
@@ -76,43 +102,6 @@ export const verification = pgTable("verification", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-export const mailAccounts = pgTable(
-  "mail_accounts",
-  {
-    id: text("id").primaryKey(),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    connector: text("connector").notNull(),
-    externalAccountId: text("external_account_id").notNull(),
-    authAccountId: text("auth_account_id")
-      .references(() => account.id, { onDelete: "cascade" }),
-    email: text("email").notNull(),
-    displayName: text("display_name").notNull(),
-    image: text("image"),
-    status: text("status").notNull().default("connected"),
-    syncCursor: text("sync_cursor"),
-    subscriptionExpiresAt: timestamp("subscription_expires_at"),
-    lastSyncedAt: timestamp("last_synced_at"),
-    syncRevision: integer("sync_revision").notNull().default(0),
-    lastError: text("last_error"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at").notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("mail_accounts_user_connector_external_uidx").on(
-      table.userId,
-      table.connector,
-      table.externalAccountId,
-    ),
-    uniqueIndex("mail_accounts_auth_account_uidx").on(table.authAccountId),
-    index("mail_accounts_connector_email_idx").on(
-      table.connector,
-      table.email,
-    ),
-  ],
-);
 
 export const mailCollectionAppearances = pgTable(
   "mail_collection_appearances",

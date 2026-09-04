@@ -1,8 +1,7 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getUserPreferences } from "@/lib/data/preferences";
 import { isDemoMode } from "@/lib/env";
 import { HOSTED_MAIL_ACCOUNT_ID } from "@/lib/mail/accounts";
-import { mailAccountsHref } from "@/lib/mail/routes";
 import {
   loadDomains,
   loadFolderCounts,
@@ -25,9 +24,6 @@ export async function MailAccountShell({
   ]);
   const account = accounts.find((item) => item.id === accountId);
   if (!account) notFound();
-  if (account.status === "reauthorize") {
-    redirect(`${mailAccountsHref}?error=reauthorize`);
-  }
   const [folderCounts, collections, domains, preferences] = await Promise.all([
     loadFolderCounts(account.id),
     loadMailCollections(account.id),
