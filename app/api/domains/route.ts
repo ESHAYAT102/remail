@@ -38,24 +38,15 @@ export async function POST(request: Request) {
     if (!body.name) {
       return NextResponse.json({ error: "Enter a domain." }, { status: 400 });
     }
-    try {
-      const domain = await getDomainProvider(user).addDomain(
-        body.name.trim().toLowerCase(),
-        (body.mailbox ?? "you").trim().toLowerCase(),
-      );
-      return NextResponse.json({ domain });
-    } catch {
-      return NextResponse.json(
-        {
-          error:
-            "Unable to add this domain. Check the name, then try again.",
-        },
-        { status: 400 },
-      );
-    }
-  } catch {
+    const domain = await getDomainProvider(user).addDomain(
+      body.name.trim().toLowerCase(),
+      (body.mailbox ?? "you").trim().toLowerCase(),
+    );
+    return NextResponse.json({ domain });
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unable to add this domain.";
     return NextResponse.json(
-      { error: "Unable to add this domain. Check the name, then try again." },
+      { error: msg },
       { status: 400 },
     );
   }

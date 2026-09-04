@@ -409,7 +409,8 @@ export function Onboarding({
       });
       setBusy(false);
       if (!res.ok) {
-        setError("Unable to add this domain. Check the name, then try again.");
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        setError(body?.error ?? "Unable to add this domain. Check the name, then try again.");
         setInvalid(true);
         return;
       }
