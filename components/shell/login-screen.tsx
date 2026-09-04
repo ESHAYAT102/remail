@@ -328,7 +328,7 @@ export function LoginScreen({
           <Link href="/terms" {...stylex.props(styles.legalLink)}>
             Terms of service
           </Link>
-          <a href="mailto:hey@stylessh.dev" {...stylex.props(styles.legalLink)}>
+          <a href="mailto:hello@eshayat.com" {...stylex.props(styles.legalLink)}>
             Contact
           </a>
         </nav>

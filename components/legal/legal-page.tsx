@@ -3,7 +3,7 @@ import Link from "next/link";
 import * as stylex from "@stylexjs/stylex";
 import { colors, fonts, radius, space } from "@/theme/tokens.stylex";
 
-export const LEGAL_CONTACT_EMAIL = "hey@stylessh.dev";
+export const LEGAL_CONTACT_EMAIL = "hello@eshayat.com";
 
 export type LegalBlock =
   | { type: "paragraph"; content: ReactNode }
@@ -245,7 +245,7 @@ export function LegalPage({
       <main id="main" {...stylex.props(styles.main)}>
         <p {...stylex.props(styles.eyebrow)}>Legal</p>
         <h1 {...stylex.props(styles.title)}>{title}</h1>
-        <p {...stylex.props(styles.updated)}>Effective September 2, 2026</p>
+        <p {...stylex.props(styles.updated)}>Effective September 4, 2026</p>
         <div {...stylex.props(styles.intro)}>{intro}</div>
 
         <div {...stylex.props(styles.sections)}>

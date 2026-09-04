@@ -57,8 +57,9 @@ const sections: LegalSectionContent[] = [
           <span key="hosted">
             <strong>Hosted-mail information.</strong> If you use a custom domain,
             Remail stores the domain, mailbox address, encrypted mailbox
-            credential, DNS setup and verification state, and the mail held by
-            the connected mail server.
+            credential, DNS setup and verification state, and the messages and
+            attachments in your hosted mailbox. If you connect a Resend API key
+            for sending, Remail stores that key encrypted.
           </span>,
         ],
       },
@@ -139,6 +140,7 @@ const sections: LegalSectionContent[] = [
         items: [
           "With Google when you choose Google sign-in.",
           "With infrastructure providers that host the application, database, mail server, networking, or security services, subject to their role in operating Remail.",
+          "With Resend when you send mail through a connected Resend API key, so the message can be delivered.",
           "When you direct Remail to send mail or otherwise share content with a recipient.",
           "When required by applicable law or necessary to protect users, Remail, or the public from fraud, abuse, or security threats.",
           "As part of a merger, acquisition, or sale of assets only after any consent required by the Google user-data rules or applicable law is obtained.",

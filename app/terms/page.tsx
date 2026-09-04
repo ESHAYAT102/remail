@@ -123,7 +123,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "You may stop using Remail or delete your account at any time. Remail may suspend or terminate access when reasonably necessary to address a violation of these terms, security risk, abuse, legal requirement, nonpayment for a paid feature, or harm to the service or others. Where practical, we will provide notice and an opportunity to resolve the issue.",
+          "You may stop using Remail or delete your account at any time. Remail may suspend or terminate access when reasonably necessary to address a violation of these terms, security risk, abuse, legal requirement, or harm to the service or others. Where practical, we will provide notice and an opportunity to resolve the issue.",
       },
     ],
   },
@@ -143,7 +143,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "To the fullest extent permitted by law, Remail will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenue, data, goodwill, or business opportunity, arising from the service. Remail's total liability for claims relating to the service will not exceed the amount you paid Remail for the service during the 12 months before the event giving rise to the claim. These limits do not apply where the law does not allow them.",
+          "To the fullest extent permitted by law, Remail will not be liable for indirect, incidental, special, consequential, exemplary, or punitive damages, or for lost profits, revenue, data, goodwill, or business opportunity, arising from the service. Because the hosted service is provided free of charge, Remail's total liability for claims relating to the service will not exceed 100 US dollars. These limits do not apply where the law does not allow them.",
       },
     ],
   },
