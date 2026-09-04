@@ -17,6 +17,7 @@ import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { hasAuthoredComposeText } from "@/lib/mail/composer-footer";
 import type { ComposeInput } from "@/lib/mail/types";
 import { persistDraft, removeDraft } from "@/lib/mail/draft-client";
+import { useFileDrop } from "./use-file-drop";
 
 const styles = stylex.create({
   backdrop: {
@@ -95,9 +96,27 @@ const styles = stylex.create({
     flexDirection: "column",
     paddingInline: space[5],
     paddingBlockEnd: space[4],
+    position: "relative",
     "@media (max-width: 640px)": {
       paddingInline: space[4],
     },
+  },
+  dropOverlay: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    inset: 0,
+    margin: space[4],
+    borderRadius: radius.xl,
+    backgroundColor: "oklch(0 0 0 / 0.08)",
+    border: `2px dashed ${colors.accent}`,
+    pointerEvents: "none",
+    zIndex: 10,
+    fontSize: fonts.uiSize,
+    lineHeight: fonts.uiLine,
+    fontWeight: 500,
+    color: colors.accent,
   },
   row: {
     display: "flex",
@@ -609,6 +628,10 @@ export function StandaloneComposer({
     setFiles(next);
   };
 
+  const { dragging, onDragOver, onDragEnter, onDragLeave, onDrop } = useFileDrop(
+    (dropped) => editFiles((current) => [...current, ...dropped]),
+  );
+
   const dirty = Boolean(
     recalled ||
       draft.draftId ||
@@ -796,7 +819,14 @@ export function StandaloneComposer({
             initialHtml={initial.html}
             onChange={(value) => editDraft(value)}
           >
-            <div {...stylex.props(styles.body)}>
+            <div
+              {...stylex.props(styles.body)}
+              onDragOver={onDragOver}
+              onDragEnter={onDragEnter}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+            >
+              {dragging ? <div {...stylex.props(styles.dropOverlay)}>Drop files here</div> : null}
               <label {...stylex.props(styles.subjectWrap)}>
                 <span className="sr-only">Subject</span>
                 <input

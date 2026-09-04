@@ -13,6 +13,7 @@ import {
 } from "@/components/mail/rich-text-editor";
 import { addRedaktFooter } from "@/lib/mail/composer-footer";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
+import { useFileDrop } from "./use-file-drop";
 import type { ComposeInput, Message } from "@/lib/mail/types";
 
 const styles = stylex.create({
@@ -39,6 +40,22 @@ const styles = stylex.create({
   cardIn: {
     opacity: 1,
     transform: "translateY(0)",
+  },
+  dropOverlay: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    position: "absolute",
+    inset: 0,
+    borderRadius: radius["2xl"],
+    backgroundColor: "oklch(0 0 0 / 0.08)",
+    border: `2px dashed ${colors.accent}`,
+    pointerEvents: "none",
+    zIndex: 10,
+    fontSize: fonts.uiSize,
+    lineHeight: fonts.uiLine,
+    fontWeight: 500,
+    color: colors.accent,
   },
   heading: {
     paddingInline: space[1],
@@ -476,6 +493,10 @@ export function CompactComposer({
     setFiles(next);
   };
 
+  const { dragging, onDragOver, onDragEnter, onDragLeave, onDrop } = useFileDrop(
+    (dropped) => editFiles((current) => [...current, ...dropped]),
+  );
+
   useEffect(() => {
     if (!animateEntrance) return;
     const frame = requestAnimationFrame(() => {
@@ -514,7 +535,15 @@ export function CompactComposer({
   };
 
   return (
-    <div {...stylex.props(styles.card, entered ? styles.cardIn : styles.cardEnter)}>
+    <div
+      {...stylex.props(styles.card, entered ? styles.cardIn : styles.cardEnter)}
+      onDragOver={onDragOver}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDrop={onDrop}
+      style={{ position: "relative" }}
+    >
+      {dragging ? <div {...stylex.props(styles.dropOverlay)}>Drop files here</div> : null}
       <ConfirmDialog
         open={discardOpen}
         title="Discard draft?"
