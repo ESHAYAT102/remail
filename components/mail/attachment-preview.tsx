@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Icons } from "@/components/ui/icons";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
@@ -13,10 +13,12 @@ const PDF_TYPE = "application/pdf";
 
 const styles = stylex.create({
   backdrop: {
-    backgroundColor: "oklch(0 0 0 / 0.6)",
+    backgroundColor: "oklch(0 0 0 / 0.5)",
+    backdropFilter: "blur(24px)",
+    WebkitBackdropFilter: "blur(24px)",
     position: "fixed",
     inset: 0,
-    zIndex: 1000,
+    zIndex: 10000,
     overscrollBehavior: "contain",
     "@media (prefers-reduced-motion: no-preference)": {
       transitionProperty: "opacity",
@@ -29,7 +31,7 @@ const styles = stylex.create({
   popup: {
     position: "fixed",
     inset: 0,
-    zIndex: 1001,
+    zIndex: 10001,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -44,54 +46,16 @@ const styles = stylex.create({
     right: 0,
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: "flex-end",
     padding: `${space[3]} ${space[4]}`,
-    zIndex: 1002,
-    backgroundColor: "oklch(0 0 0 / 0.5)",
+    zIndex: 10002,
+    backgroundColor: "transparent",
     color: "#fff",
-  },
-  fileName: {
-    fontSize: fonts.uiSize,
-    lineHeight: fonts.uiLine,
-    fontWeight: 500,
-    color: "#fff",
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    maxWidth: "50%",
-  },
-  fileSize: {
-    fontSize: fonts.captionSize,
-    lineHeight: fonts.captionLine,
-    color: "rgba(255,255,255,0.7)",
-    marginLeft: space[2],
   },
   actions: {
     display: "flex",
     alignItems: "center",
     gap: space[2],
-  },
-  toolbarBtn: {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: space[1],
-    padding: `${space[1]} ${space[2]}`,
-    borderRadius: radius.lg,
-    border: "none",
-    backgroundColor: "transparent",
-    color: "#fff",
-    fontSize: fonts.captionSize,
-    lineHeight: fonts.captionLine,
-    cursor: "pointer",
-    textDecoration: "none",
-    "@media (prefers-reduced-motion: no-preference)": {
-      transitionProperty: "background-color",
-      transitionDuration: "150ms",
-      transitionTimingFunction: "ease-out",
-    },
-    "@media (hover: hover)": {
-      ":hover": { backgroundColor: "rgba(255,255,255,0.15)" },
-    },
   },
   image: {
     maxWidth: "90vw",
@@ -217,26 +181,15 @@ export function AttachmentPreview({
     >
       <div {...stylex.props(styles.popup)}>
         <div {...stylex.props(styles.toolbar)}>
-          <div style={{ display: "flex", alignItems: "baseline", minWidth: 0 }}>
-            <span {...stylex.props(styles.fileName)}>{attachment.filename}</span>
-            <span {...stylex.props(styles.fileSize)}>{bytes(attachment.size)}</span>
-          </div>
           <div {...stylex.props(styles.actions)}>
             <a
               href={href}
               download={attachment.filename}
-              {...stylex.props(styles.toolbarBtn)}
+              {...stylex.props(styles.downloadBtn)}
             >
               <Icons.download size={14} />
               Download
             </a>
-            <button
-              type="button"
-              onClick={onClose}
-              {...stylex.props(styles.toolbarBtn)}
-            >
-              <Icons.close size={14} />
-            </button>
           </div>
         </div>
         {image ? (

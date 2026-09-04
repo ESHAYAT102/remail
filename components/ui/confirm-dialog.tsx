@@ -12,6 +12,9 @@ const styles = stylex.create({
     justifyContent: "flex-end",
     gap: space[2],
   },
+  popupOverride: {
+    zIndex: 10001,
+  },
 });
 
 export function ConfirmDialog({
@@ -50,7 +53,7 @@ export function ConfirmDialog({
     >
       <Dialog.Portal>
         <Dialog.Backdrop />
-        <Dialog.Popup>
+        <Dialog.Popup {...stylex.props(styles.popupOverride)}>
           <Dialog.Title>{title}</Dialog.Title>
           <Dialog.Description>{description}</Dialog.Description>
           <div {...stylex.props(styles.actions)}>

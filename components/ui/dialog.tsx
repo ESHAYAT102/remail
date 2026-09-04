@@ -9,6 +9,7 @@ const styles = stylex.create({
     backgroundColor: "oklch(0 0 0 / 0.4)",
     position: "fixed",
     inset: 0,
+    zIndex: 9999,
     overscrollBehavior: "contain",
     "@media (prefers-reduced-motion: no-preference)": {
       transitionProperty: "opacity",
@@ -30,6 +31,7 @@ const styles = stylex.create({
     left: "50%",
     transform: "translate(-50%, -50%)",
     outline: "none",
+    zIndex: 10000,
     overscrollBehavior: "contain",
     "@media (prefers-reduced-motion: no-preference)": {
       transitionProperty: "opacity, transform",

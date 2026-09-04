@@ -814,10 +814,45 @@ export function AppShell({
         event.preventDefault();
         compose();
       }
+      if (
+        event.key === "ArrowLeft" &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        isTyping(event)
+      ) {
+        return;
+      }
+      if (
+        event.key === "ArrowLeft" &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        const idx = visibleTabs.findIndex((tab) => tab.id === activeId);
+        if (idx > 0) {
+          event.preventDefault();
+          router.push(visibleTabs[idx - 1].href);
+        }
+        return;
+      }
+      if (
+        event.key === "ArrowRight" &&
+        !event.altKey &&
+        !event.ctrlKey &&
+        !event.metaKey
+      ) {
+        const idx = visibleTabs.findIndex((tab) => tab.id === activeId);
+        if (idx >= 0 && idx < visibleTabs.length - 1) {
+          event.preventDefault();
+          router.push(visibleTabs[idx + 1].href);
+        }
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [account, activeId, closeTabs, compose, preferences.singleKeyShortcuts, router]);
+  }, [account, activeId, closeTabs, compose, preferences.singleKeyShortcuts, router, visibleTabs]);
 
   const context = useMemo<MailShellContextValue>(
     () => ({
