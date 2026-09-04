@@ -11,6 +11,7 @@ import type { DomainSetup } from "@/lib/mail/types";
 const steps = ["domain", "resend", "name"] as const;
 type CustomDomainStep = (typeof steps)[number];
 type Step = CustomDomainStep;
+const RESEND_WEBHOOK_URL = "https://mail.eshayat.com/api/webhooks/resend";
 
 const copy: Record<Step, { title: string; lead: string }> = {
   domain: {
@@ -124,6 +125,23 @@ const styles = stylex.create({
     color: colors.textFaint,
     fontVariantNumeric: "tabular-nums",
   },
+  endpointRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: space[2],
+  },
+  endpointInput: {
+    flex: 1,
+    minWidth: 0,
+    width: "auto",
+    fontVariantNumeric: "tabular-nums",
+  },
+  copyStatus: {
+    minHeight: fonts.captionLine,
+    fontSize: fonts.captionSize,
+    lineHeight: fonts.captionLine,
+    color: colors.textFaint,
+  },
   error: {
     fontSize: fonts.captionSize,
     color: colors.text,
@@ -187,6 +205,7 @@ export function Onboarding({
   const [accountEmail, setAccountEmail] = useState("");
   const [apiKey, setApiKey] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
   const [domainName, setDomainName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(initialError ?? "");
@@ -467,8 +486,49 @@ export function Onboarding({
                     aria-describedby={error ? "onboard-error" : undefined}
                   />
                 </Field>
-                <div {...stylex.props(styles.hint)}>
-                  Subscribe the Resend webhook to email.received at /api/webhooks/resend.
+                <div {...stylex.props(styles.field)}>
+                  <label
+                    htmlFor="onboard-resend-endpoint"
+                    {...stylex.props(styles.label)}
+                  >
+                    Webhook endpoint URL
+                  </label>
+                  <div {...stylex.props(styles.endpointRow)}>
+                    <input
+                      id="onboard-resend-endpoint"
+                      {...stylex.props(styles.input, styles.endpointInput)}
+                      value={RESEND_WEBHOOK_URL}
+                      readOnly
+                      aria-describedby="onboard-resend-endpoint-help onboard-resend-copy-status"
+                      onFocus={(event) => event.currentTarget.select()}
+                    />
+                    <Button
+                      type="button"
+                      variant="soft"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(RESEND_WEBHOOK_URL);
+                          setCopyStatus("Webhook URL copied.");
+                        } catch {
+                          setCopyStatus("Couldn’t copy automatically. Select and copy the URL.");
+                        }
+                      }}
+                    >
+                      {copyStatus === "Webhook URL copied." ? "Copied" : "Copy"}
+                    </Button>
+                  </div>
+                </div>
+                <div id="onboard-resend-endpoint-help" {...stylex.props(styles.hint)}>
+                  In Resend, create an email.received webhook and paste this into
+                  the Endpoint URL field.
+                </div>
+                <div
+                  id="onboard-resend-copy-status"
+                  role="status"
+                  aria-live="polite"
+                  {...stylex.props(styles.copyStatus)}
+                >
+                  {copyStatus}
                 </div>
               </>
             ) : null}
