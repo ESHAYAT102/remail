@@ -92,6 +92,13 @@
       "when": 1788553600000,
       "tag": "0012_compose_attachment_chunks",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788560000000,
+      "tag": "0013_keybinds",
+      "breakpoints": true
     }
   ]
 }

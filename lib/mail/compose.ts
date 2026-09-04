@@ -43,7 +43,10 @@ export function attachmentBytes(attachment: ComposeAttachment) {
   return Buffer.from(attachment.data, "base64");
 }
 
-export async function composeFromRequest(request: Request): Promise<{
+export async function composeFromRequest(
+  request: Request,
+  options: { requireRecipients?: boolean } = {},
+): Promise<{
   input: ComposeInput;
   attachmentUploadIds: string[];
 }> {
@@ -67,23 +70,29 @@ export async function composeFromRequest(request: Request): Promise<{
         threadId: String(form.get("threadId") ?? "") || undefined,
         draftId: String(form.get("draftId") ?? "") || undefined,
         attachments: files.length ? await filesToAttachments(files) : undefined,
-      }),
+      }, options),
       attachmentUploadIds: uploadIds,
     };
   }
   return {
-    input: validateComposeInput(await request.json()),
+    input: validateComposeInput(await request.json(), options),
     attachmentUploadIds: [],
   };
 }
 
-export function validateComposeInput(value: unknown): ComposeInput {
+export function validateComposeInput(
+  value: unknown,
+  options: { requireRecipients?: boolean } = {},
+): ComposeInput {
   if (!value || typeof value !== "object") {
     throw new MailError("Invalid message.");
   }
   const input = value as Record<string, unknown>;
   const from = stringField(input.from, "sender", 320);
-  const to = stringField(input.to, "recipients", MAX_HEADER, true);
+  const to =
+    options.requireRecipients === false
+      ? stringField(input.to, "recipients", MAX_HEADER) ?? ""
+      : stringField(input.to, "recipients", MAX_HEADER, true);
   const cc = stringField(input.cc, "Cc", MAX_HEADER);
   const bcc = stringField(input.bcc, "Bcc", MAX_HEADER);
   const subject = stringField(input.subject, "subject", MAX_SUBJECT) ?? "";

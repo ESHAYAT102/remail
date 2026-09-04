@@ -237,6 +237,7 @@ const styles = stylex.create({
 });
 
 export const settingsControlClass = stylex.props(styles.input);
+export const settingsControlStyle = styles.input;
 export const settingsFormClass = stylex.props(styles.form);
 
 export function SettingsPage({

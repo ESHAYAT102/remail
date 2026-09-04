@@ -17,6 +17,7 @@ const definitions: Record<MailConnectorId, MailConnectorDefinition> = {
     capabilities: [
       "read",
       "send",
+      "drafts",
       "markUnread",
       "archive",
       "attachments",

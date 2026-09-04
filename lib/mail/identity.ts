@@ -36,9 +36,26 @@ export function isOwnAddress(
 export function defaultSenderEmail(
   accountEmail: string,
   defaultSenderAlias?: string | null,
+  loginEmail?: string | null,
 ): string {
   const alias = defaultSenderAlias?.trim();
-  if (!alias) return accountEmail;
   const domain = accountEmail.split("@").at(-1) ?? "";
+  if (!alias) {
+    const loginAlias = senderAliasOnDomain(loginEmail, domain);
+    return loginAlias ? `${loginAlias}@${domain}` : accountEmail;
+  }
   return `${alias}@${domain}`;
+}
+
+/** Local part of an address when it belongs to the active mailbox domain. */
+export function senderAliasOnDomain(
+  email: string | null | undefined,
+  domain: string,
+): string {
+  const address = email?.trim() ?? "";
+  const separator = address.lastIndexOf("@");
+  if (separator <= 0) return "";
+  return address.slice(separator + 1).toLowerCase() === domain.trim().toLowerCase()
+    ? address.slice(0, separator).toLowerCase()
+    : "";
 }

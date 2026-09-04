@@ -137,6 +137,7 @@ export function ThreadView({
   theme: ThemePreference;
 }) {
   const last = detail.messages[detail.messages.length - 1];
+  const rootRef = useRef<HTMLDivElement>(null);
   const replyRef = useRef<HTMLDivElement>(null);
   const messageIds = useMemo(
     () => new Set(detail.messages.map((message) => message.id)),
@@ -164,15 +165,87 @@ export function ThreadView({
 
   useEffect(() => {
     if (!mode) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    replyRef.current?.scrollIntoView({
-      block: "nearest",
-      behavior: reduce ? "auto" : "smooth",
+    const frame = window.requestAnimationFrame(() => {
+      const scroller = rootRef.current?.parentElement;
+      scroller?.scrollTo({ top: scroller.scrollHeight, behavior: "auto" });
+      replyRef.current
+        ?.querySelector<HTMLElement>('[contenteditable="true"]')
+        ?.focus({ preventScroll: true });
     });
+    return () => window.cancelAnimationFrame(frame);
   }, [mode]);
 
+  useEffect(() => {
+    const navigateMessages = (event: KeyboardEvent) => {
+      if (
+        (event.key !== "ArrowDown" && event.key !== "ArrowUp") ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        isTyping(event)
+      ) {
+        return;
+      }
+
+      const root = rootRef.current;
+      const scroller = root?.parentElement;
+      const messages = root
+        ? Array.from(root.querySelectorAll<HTMLElement>("[data-thread-message]"))
+        : [];
+      if (!scroller || messages.length === 0) return;
+
+      const viewport = scroller.getBoundingClientRect();
+      const top = viewport.top;
+      const bottom = viewport.bottom;
+      const tolerance = 2;
+      const currentIndex = messages.findIndex(
+        (message) => message.getBoundingClientRect().bottom > top + tolerance,
+      );
+      if (currentIndex < 0) return;
+
+      const current = messages[currentIndex];
+      const currentRect = current.getBoundingClientRect();
+      const oversized = currentRect.height > scroller.clientHeight;
+      const page = Math.max(1, scroller.clientHeight - 48);
+
+      event.preventDefault();
+      if (event.key === "ArrowDown") {
+        if (oversized && currentRect.bottom > bottom + tolerance) {
+          scroller.scrollBy({
+            top: Math.min(page, currentRect.bottom - bottom),
+            behavior: "auto",
+          });
+          return;
+        }
+        const next =
+          currentRect.top > top + tolerance
+            ? current
+            : messages[currentIndex + 1];
+        if (next) scrollMessageToTop(scroller, next);
+        return;
+      }
+
+      if (oversized && currentRect.top < top - tolerance) {
+        scroller.scrollBy({
+          top: -Math.min(page, top - currentRect.top),
+          behavior: "auto",
+        });
+        return;
+      }
+      const previous =
+        currentRect.top < top - tolerance
+          ? current
+          : messages[currentIndex - 1];
+      if (previous) scrollMessageToTop(scroller, previous);
+    };
+
+    window.addEventListener("keydown", navigateMessages);
+    return () => window.removeEventListener("keydown", navigateMessages);
+  }, [detail.messages]);
+
   return (
-    <div {...stylex.props(styles.root)}>
+    <div ref={rootRef} {...stylex.props(styles.root)}>
       {detail.messages.map((message, index) => {
         const previous = detail.messages[index - 1];
         const day = formatDay(message.date);
@@ -181,6 +254,7 @@ export function ThreadView({
         return (
           <div
             key={message.id}
+            data-thread-message=""
             {...stylex.props(
               styles.turn,
               !previous && styles.turnFirst,
@@ -299,5 +373,22 @@ export function ThreadView({
         </div>
       ) : null}
     </div>
+  );
+}
+
+function scrollMessageToTop(scroller: HTMLElement, message: HTMLElement) {
+  const viewport = scroller.getBoundingClientRect();
+  const messageRect = message.getBoundingClientRect();
+  scroller.scrollBy({
+    top: messageRect.top - viewport.top,
+    behavior: "auto",
+  });
+}
+
+function isTyping(event: KeyboardEvent) {
+  const target = event.target;
+  return (
+    target instanceof HTMLElement &&
+    (target.matches("input, textarea, select") || target.isContentEditable)
   );
 }

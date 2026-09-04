@@ -5,6 +5,7 @@ import { SenderAliasInput } from "@/components/mail/sender-alias-input";
 import { useMailShell } from "@/components/shell/app-shell";
 import { mailFoldersForAccount } from "@/components/shell/sidebar";
 import { collectionViewId } from "@/lib/mail/routes";
+import { senderAliasOnDomain } from "@/lib/mail/identity";
 import { isValidSenderAlias, normalizeSenderAlias } from "@/lib/mail/sender-aliases";
 import type { UserPreferences } from "@/lib/preferences";
 import {
@@ -37,12 +38,14 @@ const previewOptions = [
 ] as const;
 
 export function AppearanceSettings() {
-  const { account, collections, preferences, updatePreferences } = useMailShell();
+  const { account, collections, preferences, sessionUser, updatePreferences } = useMailShell();
   const requestId = useRef(0);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState({ message: "", error: false });
-  const [senderAlias, setSenderAlias] = useState(preferences.defaultSenderAlias);
   const domain = account.email.split("@").at(-1) ?? account.email;
+  const [senderAlias, setSenderAlias] = useState(
+    preferences.defaultSenderAlias || senderAliasOnDomain(sessionUser.email, domain),
+  );
   const folderOptions = [
     ...mailFoldersForAccount(account).map((folder) => ({
       value: folder.id,
@@ -94,7 +97,7 @@ export function AppearanceSettings() {
   return (
     <SettingsPage
       title="Appearance & reading"
-      description="Set the theme, message layout, composing defaults, and shortcuts."
+      description="Set the theme, message layout, and composing defaults."
     >
       <SettingsCard title="Appearance">
         <ChoiceSetting
@@ -122,7 +125,7 @@ export function AppearanceSettings() {
       <SettingsCard title="Composing" overflowVisible>
         <SettingsField
           htmlFor="default-sender-alias"
-          label="Default sender"
+          label="Default email"
           hint="The address used when you start a new email. Type only the part before @."
         >
           <SenderAliasInput
@@ -190,7 +193,7 @@ export function AppearanceSettings() {
         <ToggleSetting
           id="single-key-shortcuts"
           label="Use single-key shortcuts"
-          description="Press / to search, C to compose, Q to close the active tab, H/L to switch tabs, J/K or the arrow keys to highlight messages, Space to select, U to toggle read status, Enter to open, R to reply, F to forward, and 1–9 to open sidebar folders. Ctrl/⌘+, opens Settings."
+          description="Enable shortcuts that use a letter, number, or symbol without a modifier key. Customize them in Keyboard shortcuts."
           checked={preferences.singleKeyShortcuts}
           disabled={saving}
           onChange={(singleKeyShortcuts) => void save({ singleKeyShortcuts })}

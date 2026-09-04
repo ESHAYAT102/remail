@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
+import { settingsControlStyle } from "@/components/settings/settings-ui";
 import { fuzzySenderAliases, normalizeSenderAlias } from "@/lib/mail/sender-aliases";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 
@@ -40,6 +41,7 @@ const styles = stylex.create({
     "::placeholder": { color: colors.textFaint },
     "@media (max-width: 640px)": { fontSize: "16px" },
   },
+  inputRaised: { paddingInlineStart: 0 },
   domain: {
     display: "flex",
     alignItems: "center",
@@ -59,11 +61,10 @@ const styles = stylex.create({
     maxHeight: 240,
     overflowY: "auto",
     padding: space[1],
-    borderWidth: 1,
-    borderStyle: "solid",
-    borderColor: colors.line,
+    borderWidth: 0,
     borderRadius: radius.lg,
     backgroundColor: colors.surface,
+    backgroundImage: colors.raised,
     boxShadow: elevation.overlay,
   },
   popupAbove: {
@@ -118,6 +119,7 @@ export function SenderAliasInput({
   domain,
   placement = "below",
   disabled,
+  raised = false,
   onChange,
   onCommit,
 }: {
@@ -126,6 +128,7 @@ export function SenderAliasInput({
   domain: string;
   placement?: "above" | "below";
   disabled?: boolean;
+  raised?: boolean;
   onChange: (value: string) => void;
   onCommit?: (value: string) => void;
 }) {
@@ -143,7 +146,7 @@ export function SenderAliasInput({
 
   return (
     <div {...stylex.props(styles.root)}>
-      <div {...stylex.props(styles.control)}>
+      <div {...stylex.props(styles.control, raised && settingsControlStyle)}>
         <input
           id={id}
           data-border-focus=""
@@ -162,7 +165,7 @@ export function SenderAliasInput({
           autoCapitalize="none"
           spellCheck={false}
           placeholder="hello"
-          {...stylex.props(styles.input)}
+          {...stylex.props(styles.input, raised && styles.inputRaised)}
           onFocus={() => setOpen(true)}
           onBlur={() => {
             setOpen(false);
@@ -230,11 +233,13 @@ export function SenderField({
   id,
   value,
   placement,
+  raised,
   onChange,
 }: {
   id: string;
   value: string;
   placement?: "above" | "below";
+  raised?: boolean;
   onChange: (value: string) => void;
 }) {
   const separator = value.lastIndexOf("@");
@@ -251,6 +256,7 @@ export function SenderField({
         value={localPart}
         domain={domain}
         placement={placement}
+        raised={raised}
         onChange={(alias) => onChange(`${alias}@${domain}`)}
       />
     </div>

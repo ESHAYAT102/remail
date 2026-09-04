@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Icons } from "@/components/ui/icons";
+import { settingsControlStyle } from "@/components/settings/settings-ui";
 import {
   RichTextComposer,
   RichTextEditor,
@@ -477,6 +478,7 @@ function AddressField({
   autoComplete,
   extra,
   errorId,
+  inputRef,
   onChange,
   onEdit,
 }: {
@@ -487,6 +489,7 @@ function AddressField({
   autoComplete: string;
   extra?: React.ReactNode;
   errorId?: string;
+  inputRef?: React.RefObject<HTMLInputElement | null>;
   onChange: (value: string) => void;
   onEdit?: () => void;
 }) {
@@ -508,7 +511,7 @@ function AddressField({
       <label htmlFor={id} {...stylex.props(styles.label)}>
         {label}
       </label>
-      <div {...stylex.props(styles.chips)}>
+      <div {...stylex.props(styles.chips, settingsControlStyle)}>
         {addresses.map((address) => (
           <span key={address} {...stylex.props(styles.chip)}>
             <span {...stylex.props(styles.chipText)}>{address}</span>
@@ -524,6 +527,7 @@ function AddressField({
         ))}
         <input
           id={id}
+          ref={inputRef}
           data-border-focus=""
           {...stylex.props(styles.field, styles.placeholder)}
           name={id}
@@ -590,7 +594,7 @@ export function StandaloneComposer({
   onSend: (input: ComposeInput, files?: File[]) => Promise<string | null>;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const subjectRef = useRef<HTMLInputElement>(null);
+  const toRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState(false);
   const [showCc, setShowCc] = useState(false);
   const initialFiles = filesFromDraft(initial);
@@ -719,6 +723,17 @@ export function StandaloneComposer({
     reset();
   };
 
+  const saveAsDraft = async () => {
+    try {
+      await saveNow(draft, files);
+      onOpenChange(false);
+    } catch (error) {
+      setSendError(
+        error instanceof Error ? error.message : "Unable to save this draft.",
+      );
+    }
+  };
+
   return (
     <Dialog.Root
       open={open}
@@ -730,7 +745,7 @@ export function StandaloneComposer({
       <Dialog.Portal>
         <Dialog.Backdrop className={stylex.props(styles.backdrop).className} />
         <Dialog.Popup
-          initialFocus={subjectRef}
+          initialFocus={toRef}
           {...stylex.props(styles.popup, expanded && styles.popupExpanded)}
         >
           <Dialog.Title className="sr-only">New email</Dialog.Title>
@@ -743,11 +758,13 @@ export function StandaloneComposer({
                 <SenderField
                   id="compose-from"
                   value={draft.from ?? senderEmail}
+                  raised
                   onChange={(from) => editDraft({ from })}
                 />
               ) : null}
               <AddressField
                 id="compose-to"
+                inputRef={toRef}
                 label="To"
                 value={draft.to}
                 placeholder="recipient@example.com"
@@ -823,7 +840,6 @@ export function StandaloneComposer({
               <label {...stylex.props(styles.subjectWrap)}>
                 <span className="sr-only">Subject</span>
                 <input
-                  ref={subjectRef}
                   {...stylex.props(styles.subject, styles.placeholder)}
                   name="subject"
                   placeholder="Subject"
@@ -917,6 +933,16 @@ export function StandaloneComposer({
                 <Button type="button" variant="ghost" onClick={() => void discard()}>
                   Discard
                 </Button>
+                {supportsDrafts ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={sending || !hasDraftContent(draft, files)}
+                    onClick={() => void saveAsDraft()}
+                  >
+                    Save as draft
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="soft"

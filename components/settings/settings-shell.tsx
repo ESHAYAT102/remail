@@ -16,12 +16,14 @@ import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 const labels = {
   account: "Account",
   appearance: "Appearance & reading",
+  keybinds: "Keyboard shortcuts",
   security: "Security",
 } as const;
 
 const sectionIcons = {
   account: Icons.sender,
   appearance: Icons.appearance,
+  keybinds: Icons.keyboard,
   security: Icons.security,
 } as const;
 

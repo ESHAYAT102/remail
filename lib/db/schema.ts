@@ -31,6 +31,7 @@ export const userPreferences = pgTable("user_preferences", {
   messagePreview: text("message_preview").notNull().default("one"),
   defaultSenderAlias: text("default_sender_alias").notNull().default(""),
   defaultFolder: text("default_folder").notNull().default("inbox"),
+  keybinds: jsonb("keybinds").notNull().default({}),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 

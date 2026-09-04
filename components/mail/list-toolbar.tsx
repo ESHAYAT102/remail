@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { CollectionActions } from "@/components/mail/collection-actions";
+import { useMailShell } from "@/components/shell/app-shell";
 import { FolderMark } from "@/components/mail/folder-mark";
 import { SelectionCheckbox } from "@/components/mail/selection-checkbox";
 import { IconButton } from "@/components/ui/icon-button";
@@ -14,6 +15,7 @@ import {
   type ThreadSelectionTargets,
 } from "@/lib/mail/thread-selection";
 import { collectionViewId } from "@/lib/mail/routes";
+import { enabledKeybindMatchesEvent } from "@/lib/mail/keybinds";
 import { colors, fonts, radius, space } from "@/theme/tokens.stylex";
 import type {
   MailAccount,
@@ -290,6 +292,7 @@ export function ListToolbar({
   onBulkAction: (action: ThreadBulkAction) => void;
   onSelectionChange: (selectedIds: Set<string>) => void;
 }) {
+  const { preferences } = useMailShell();
   const [searchOpen, setSearchOpen] = useState(Boolean(query.q));
   const inputRef = useRef<HTMLInputElement>(null);
   const searchButtonRef = useRef<HTMLButtonElement>(null);
@@ -324,11 +327,11 @@ export function ListToolbar({
   useEffect(() => {
     const focusSearch = (event: KeyboardEvent) => {
       if (
-        event.key !== "/" ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
+        !enabledKeybindMatchesEvent(
+          event,
+          preferences.keybinds.search,
+          preferences.singleKeyShortcuts,
+        ) ||
         selectedCount > 0
       ) {
         return;
@@ -346,7 +349,7 @@ export function ListToolbar({
     };
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
-  }, [selectedCount]);
+  }, [preferences.keybinds.search, preferences.singleKeyShortcuts, selectedCount]);
 
   const openSearch = () => {
     setSearchOpen(true);

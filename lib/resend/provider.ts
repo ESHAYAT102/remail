@@ -123,6 +123,7 @@ function toMessage(
       size: file.size,
       contentId: file.contentId ?? undefined,
       inline: file.inline,
+      content: row.folder === "drafts" ? file.content : undefined,
     })),
   };
 }
@@ -131,6 +132,7 @@ function toThread(rows: StoredMessage[]): Thread {
   const latest = rows.at(-1)!;
   return {
     id: latest.threadId,
+    draftId: latest.folder === "drafts" ? latest.id : undefined,
     folder: folderFor(latest),
     subject: latest.subject || "(no subject)",
     from: latest.from as StoredAddress,
@@ -393,11 +395,114 @@ export function createResendProvider(
             })),
           );
         }
+        if (input.draftId) {
+          await tx
+            .delete(hostedMessages)
+            .where(
+              and(
+                eq(hostedMessages.userId, user.id),
+                eq(hostedMessages.id, input.draftId),
+                eq(hostedMessages.folder, "drafts"),
+              ),
+            );
+        }
       });
       return { id, threadId, sentAt: sentAt.toISOString() };
     },
-    async saveDraft() { throw new MailError("Drafts are not available for this account yet."); },
-    async deleteDraft() { return false; },
+    async saveDraft(input) {
+      const domains = await listUserDomains(user);
+      const sender = (input.from ?? mailAccount.email).trim().toLowerCase();
+      const owned = domains.find((item) => sender.endsWith(`@${item.name}`));
+      if (!owned) throw new MailError("Choose a sender on one of your domains.");
+
+      const existing = input.id
+        ? (
+            await database
+              .select()
+              .from(hostedMessages)
+              .where(
+                and(
+                  eq(hostedMessages.userId, user.id),
+                  eq(hostedMessages.id, input.id),
+                  eq(hostedMessages.folder, "drafts"),
+                ),
+              )
+          )[0]
+        : undefined;
+      if (input.id && !existing) throw new MailError("Draft not found.");
+
+      const id = existing?.id ?? crypto.randomUUID();
+      const threadId = input.threadId ?? existing?.threadId ?? id;
+      const now = new Date();
+      const values = {
+        userId: user.id,
+        domainId: owned.id,
+        threadId,
+        direction: "outbound",
+        folder: "drafts",
+        unread: false,
+        from: { name: user.name, email: sender },
+        to: parseAddressList(input.to),
+        cc: parseAddressList(input.cc),
+        bcc: parseAddressList(input.bcc),
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
+        headers: {},
+        receivedAt: now,
+      };
+
+      await database.transaction(async (tx) => {
+        if (existing) {
+          await tx
+            .update(hostedMessages)
+            .set(values)
+            .where(
+              and(
+                eq(hostedMessages.userId, user.id),
+                eq(hostedMessages.id, id),
+              ),
+            );
+          await tx
+            .delete(hostedAttachments)
+            .where(eq(hostedAttachments.messageId, id));
+        } else {
+          await tx.insert(hostedMessages).values({
+            id,
+            providerEmailId: `draft:${id}`,
+            ...values,
+          });
+        }
+        if (input.attachments?.length) {
+          await tx.insert(hostedAttachments).values(
+            input.attachments.map((file) => ({
+              id: crypto.randomUUID(),
+              messageId: id,
+              filename: file.filename,
+              mimeType: file.mimeType,
+              size: file.size,
+              contentId: null,
+              inline: false,
+              content: file.data,
+            })),
+          );
+        }
+      });
+      return { id };
+    },
+    async deleteDraft(id) {
+      const deleted = await database
+        .delete(hostedMessages)
+        .where(
+          and(
+            eq(hostedMessages.userId, user.id),
+            eq(hostedMessages.id, id),
+            eq(hostedMessages.folder, "drafts"),
+          ),
+        )
+        .returning({ id: hostedMessages.id });
+      return deleted.length > 0;
+    },
     async listDomains() { return listUserDomains(user); },
     async addDomain(name, mailboxLocalPart) {
       const normalized = name.trim().toLowerCase().replace(/\.$/, "");

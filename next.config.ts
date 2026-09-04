@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   // Vercel packages the traced output itself; standalone is for the Docker image.
   output: process.env.VERCEL ? undefined : "standalone",
   cacheComponents: true,
+  devIndicators: false,
   partialPrefetching: true,
   experimental: {
     staleTimes: {

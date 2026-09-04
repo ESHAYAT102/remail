@@ -19,6 +19,7 @@ import { AccountSessionsProvider } from "@/components/auth/account-sessions";
 import { Button } from "@/components/ui/button";
 import { Icons } from "@/components/ui/icons";
 import { SyncThemePreference } from "@/components/ui/theme-transitions";
+import { ShortcutReferenceDialog } from "@/components/settings/shortcut-reference-dialog";
 import { ThreadList } from "@/components/mail/thread-list";
 import { ThreadView, type ReplyMode } from "@/components/mail/thread-view";
 import { PendingSendRow } from "@/components/mail/pending-send";
@@ -51,6 +52,10 @@ import {
 } from "@/lib/mail/thread-state";
 import type { FolderCounts } from "@/lib/mail/folder-counts";
 import { defaultSenderEmail, ownAddressList } from "@/lib/mail/identity";
+import {
+  enabledKeybindMatchesEvent,
+  keybindMatchesEvent,
+} from "@/lib/mail/keybinds";
 import {
   collectThreadSelectionTargets,
   type ThreadBulkAction,
@@ -221,6 +226,9 @@ type MailShellContextValue = {
   sending: boolean;
   compose: () => void;
   openDraft: (draft: ComposeInput) => void;
+  threadComposeIntent: { threadId: string; mode: "reply" | "forward" } | null;
+  openThreadComposer: (threadId: string, mode: "reply" | "forward") => void;
+  clearThreadComposeIntent: () => void;
   registerView: (tab: WorkspaceTab) => void;
   updateThreadViewUnread: (threadId: string, unread: boolean) => void;
   adjustUnreadCounts: (folder: string, delta: number) => void;
@@ -472,6 +480,11 @@ export function AppShell({
   const [activeTabEdge, setActiveTabEdge] = useState<WorkspaceTabEdge>(null);
   const [domain, setDomain] = useState<DomainSetup | null>(initialDomain);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [threadComposeIntent, setThreadComposeIntent] = useState<{
+    threadId: string;
+    mode: "reply" | "forward";
+  } | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [composerDraft, setComposerDraft] = useState<ComposeInput | null>(null);
   const [composerSession, setComposerSession] = useState(0);
   const [recalled, setRecalled] = useState<PendingSend | null>(null);
@@ -741,11 +754,42 @@ export function AppShell({
     setComposeOpen(true);
   }, []);
 
+  const toggleTheme = useCallback(() => {
+    const previousTheme = preferences.theme;
+    const dark =
+      previousTheme === "dark" ||
+      (previousTheme === "system" &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches);
+    const theme = dark ? "light" : "dark";
+    setPreferences({ ...preferences, theme });
+    void fetch("/api/settings/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme }),
+    }).then((response) => {
+      if (response.ok) return;
+      setPreferences(preferences);
+    }).catch(() => {
+      setPreferences(preferences);
+    });
+  }, [preferences, setPreferences]);
+
   const openDraft = useCallback((draft: ComposeInput) => {
     setComposerDraft(draft);
     setComposerSession((current) => current + 1);
     setComposeOpen(true);
   }, []);
+
+  const openThreadComposer = useCallback(
+    (threadId: string, mode: "reply" | "forward") => {
+      setThreadComposeIntent({ threadId, mode });
+    },
+    [],
+  );
+  const clearThreadComposeIntent = useCallback(
+    () => setThreadComposeIntent(null),
+    [],
+  );
 
   const signOut = useCallback(async () => {
     if (demoMode) await fetch("/api/auth/demo", { method: "DELETE" });
@@ -816,14 +860,18 @@ export function AppShell({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.code === "Comma") {
+      const keybinds = preferences.keybinds;
+      if (keybindMatchesEvent(event, keybinds.openSettings)) {
         event.preventDefault();
         router.push(mailSettingsHref("account"));
         return;
       }
-      if (event.altKey && event.code === "KeyN") {
+      if (
+        keybindMatchesEvent(event, keybinds.showShortcuts) &&
+        !isTyping(event)
+      ) {
         event.preventDefault();
-        compose();
+        setShortcutsOpen((current) => !current);
         return;
       }
       if (
@@ -843,11 +891,11 @@ export function AppShell({
         return;
       }
       if (
-        preferences.singleKeyShortcuts &&
-        event.key.toLowerCase() === "q" &&
-        !event.altKey &&
-        !event.ctrlKey &&
-        !event.metaKey &&
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.closeTab,
+          preferences.singleKeyShortcuts,
+        ) &&
         !isTyping(event) &&
         activeId !== FOLDER_TAB_ID
       ) {
@@ -856,47 +904,58 @@ export function AppShell({
         return;
       }
       if (
-        preferences.singleKeyShortcuts &&
-        event.key === "c" &&
-        !event.altKey &&
-        !event.ctrlKey &&
-        !event.metaKey &&
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.newEmail,
+          preferences.singleKeyShortcuts,
+        ) &&
         !isTyping(event)
       ) {
         event.preventDefault();
         compose();
-      }
-      if (
-        (event.key === "ArrowLeft" || event.key === "ArrowRight") &&
-        !event.altKey &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey &&
-        !isTyping(event)
-      ) {
-        const idx = visibleTabs.findIndex((tab) => tab.id === activeId);
-        const target =
-          event.key === "ArrowLeft" ? visibleTabs[idx - 1] : visibleTabs[idx + 1];
-        if (target) {
-          event.preventDefault();
-          router.push(target.href);
-        }
         return;
       }
       if (
-        preferences.singleKeyShortcuts &&
-        (event.key.toLowerCase() === "h" || event.key.toLowerCase() === "l") &&
-        !event.altKey &&
-        !event.ctrlKey &&
-        !event.metaKey &&
-        !event.shiftKey &&
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.newFolder,
+          preferences.singleKeyShortcuts,
+        ) &&
+        !isTyping(event)
+      ) {
+        event.preventDefault();
+        window.dispatchEvent(new Event("redakt:create-folder"));
+        return;
+      }
+      if (
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.toggleTheme,
+          preferences.singleKeyShortcuts,
+        ) &&
+        !isTyping(event)
+      ) {
+        event.preventDefault();
+        toggleTheme();
+        return;
+      }
+      if (
+        (enabledKeybindMatchesEvent(
+          event,
+          keybinds.prevTab,
+          preferences.singleKeyShortcuts,
+        ) ||
+          enabledKeybindMatchesEvent(
+            event,
+            keybinds.nextTab,
+            preferences.singleKeyShortcuts,
+          )) &&
         !isTyping(event)
       ) {
         const idx = visibleTabs.findIndex((tab) => tab.id === activeId);
-        const target =
-          event.key.toLowerCase() === "h"
-            ? visibleTabs[idx - 1]
-            : visibleTabs[idx + 1];
+        const target = keybindMatchesEvent(event, keybinds.prevTab)
+          ? visibleTabs[idx - 1]
+          : visibleTabs[idx + 1];
         if (target) {
           event.preventDefault();
           router.push(target.href);
@@ -906,7 +965,17 @@ export function AppShell({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [account, activeId, closeTabs, compose, preferences.singleKeyShortcuts, router, visibleTabs]);
+  }, [
+    account,
+    activeId,
+    closeTabs,
+    compose,
+    preferences.keybinds,
+    preferences.singleKeyShortcuts,
+    router,
+    toggleTheme,
+    visibleTabs,
+  ]);
 
   const context = useMemo<MailShellContextValue>(
     () => ({
@@ -929,6 +998,9 @@ export function AppShell({
       sending: false,
       compose,
       openDraft,
+      threadComposeIntent,
+      openThreadComposer,
+      clearThreadComposeIntent,
       registerView,
       updateThreadViewUnread,
       adjustUnreadCounts,
@@ -949,12 +1021,15 @@ export function AppShell({
       adjustMoveCounts,
       adjustStarredCounts,
       clearRecalled,
+      clearThreadComposeIntent,
       compose,
       demoMode,
       openDraft,
+      openThreadComposer,
       domain,
       pending,
       preferences,
+      threadComposeIntent,
       collections,
       recalled,
       recallSend,
@@ -978,6 +1053,11 @@ export function AppShell({
       mail={context}
     >
       <SyncThemePreference preference={preferences.theme} />
+      <ShortcutReferenceDialog
+        open={shortcutsOpen}
+        onOpenChange={setShortcutsOpen}
+        keybinds={preferences.keybinds}
+      />
       <div
         data-mail-shell=""
         data-density={preferences.density}
@@ -1037,7 +1117,11 @@ export function AppShell({
         <StandaloneComposer
           key={`${composerSession}:${composerDraft?.draftId ?? recalled?.id ?? "new"}:${preferences.includeRedaktFooter}`}
           accountId={account.id}
-          senderEmail={defaultSenderEmail(account.email, preferences.defaultSenderAlias)}
+          senderEmail={defaultSenderEmail(
+            account.email,
+            preferences.defaultSenderAlias,
+            activeUser.email,
+          )}
           editableSender
           supportsDrafts={account.capabilities.includes("drafts")}
           open={composeOpen}
@@ -1153,9 +1237,8 @@ export function FolderRoute({
     },
     [selectionScope],
   );
-  const requestBulkAction = useCallback(
-    (action: ThreadBulkAction) => {
-      const threadIds = [...selectedThreadIds];
+  const requestActionForThreads = useCallback(
+    (threadIds: string[], action: ThreadBulkAction) => {
       if (threadIds.length === 0 || bulkActionRequest) return;
       bulkActionSequence.current += 1;
       setBulkActionState({
@@ -1168,7 +1251,13 @@ export function FolderRoute({
         status: "",
       });
     },
-    [bulkActionRequest, selectedThreadIds, selectionScope],
+    [bulkActionRequest, selectionScope],
+  );
+  const requestBulkAction = useCallback(
+    (action: ThreadBulkAction) => {
+      requestActionForThreads([...selectedThreadIds], action);
+    },
+    [requestActionForThreads, selectedThreadIds],
   );
   const toggleSelectedUnread = useCallback(() => {
     if (!account.capabilities.includes("markUnread")) return;
@@ -1181,6 +1270,18 @@ export function FolderRoute({
       unread: !selectedThreads.some((thread) => thread.unread),
     });
   }, [account.capabilities, requestBulkAction, selectedThreadIds, selectionTargets]);
+  const toggleActiveUnread = useCallback(
+    (threadId: string) => {
+      if (!account.capabilities.includes("markUnread")) return;
+      const thread = selectionTargets.items.find((item) => item.id === threadId);
+      if (!thread) return;
+      requestActionForThreads([threadId], {
+        type: "unread",
+        unread: !thread.unread,
+      });
+    },
+    [account.capabilities, requestActionForThreads, selectionTargets.items],
+  );
   const completeBulkAction = useCallback(
     (id: number, result: ThreadBulkActionResult) => {
       setBulkActionState((current) => {
@@ -1311,6 +1412,7 @@ export function FolderRoute({
         selectedThreadIds={selectedThreadIds}
         onSelectionChange={updateSelection}
         onToggleSelectedUnread={toggleSelectedUnread}
+        onToggleActiveUnread={toggleActiveUnread}
         onSelectionTargetsChange={updateSelectionTargets}
         selectionResetKey={selectionResetKey}
         bulkActionRequest={bulkActionRequest}
@@ -1328,6 +1430,7 @@ function FolderResults({
   selectedThreadIds,
   onSelectionChange,
   onToggleSelectedUnread,
+  onToggleActiveUnread,
   onSelectionTargetsChange,
   selectionResetKey,
   bulkActionRequest,
@@ -1340,6 +1443,7 @@ function FolderResults({
   selectedThreadIds: ReadonlySet<string>;
   onSelectionChange: (selectedIds: Set<string>) => void;
   onToggleSelectedUnread: () => void;
+  onToggleActiveUnread: (threadId: string) => void;
   onSelectionTargetsChange: (targets: ThreadSelectionTargets) => void;
   selectionResetKey: number;
   bulkActionRequest: ThreadBulkActionRequest | null;
@@ -1357,6 +1461,7 @@ function FolderResults({
     adjustMoveCounts,
     adjustStarredCounts,
     adjustUnreadCounts,
+    openThreadComposer,
     updateThreadViewUnread,
     compose,
     pending,
@@ -1413,32 +1518,73 @@ function FolderResults({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase();
-      if (
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        isTyping(event)
-      ) {
+      const keybinds = preferences.keybinds;
+      if (isTyping(event)) {
         return;
       }
-
       if (
-        key === "u" &&
-        preferences.singleKeyShortcuts &&
-        selectedThreadIds.size > 0
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.toggleRead,
+          preferences.singleKeyShortcuts,
+        )
+      ) {
+        if (selectedThreadIds.size > 0) {
+          event.preventDefault();
+          onToggleSelectedUnread();
+          return;
+        }
+        if (keyboardActiveThreadId) {
+          event.preventDefault();
+          onToggleActiveUnread(keyboardActiveThreadId);
+          return;
+        }
+      }
+
+      const activeThreadId =
+        keyboardActiveThreadId ??
+        (selectedThreadIds.size === 1
+          ? selectedThreadIds.values().next().value
+          : undefined);
+      if (
+        activeThreadId &&
+        (enabledKeybindMatchesEvent(
+          event,
+          keybinds.reply,
+          preferences.singleKeyShortcuts,
+        ) ||
+          enabledKeybindMatchesEvent(
+            event,
+            keybinds.forward,
+            preferences.singleKeyShortcuts,
+          ))
       ) {
         event.preventDefault();
-        onToggleSelectedUnread();
+        const mode = enabledKeybindMatchesEvent(
+          event,
+          keybinds.reply,
+          preferences.singleKeyShortcuts,
+        )
+          ? "reply"
+          : "forward";
+        openThreadComposer(activeThreadId, mode);
+        router.push(mailThreadHref(folder, activeThreadId, query, account.id));
         return;
       }
 
-      const movingDown = key === "j" || event.key === "ArrowDown";
-      const movingUp = key === "k" || event.key === "ArrowUp";
-      if (
-        (movingDown || movingUp) &&
-        (event.key.startsWith("Arrow") || preferences.singleKeyShortcuts)
-      ) {
+      const movingDown =
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.moveNext,
+          preferences.singleKeyShortcuts,
+        );
+      const movingUp =
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.movePrev,
+          preferences.singleKeyShortcuts,
+        );
+      if (movingDown || movingUp) {
         if (threads.length === 0) return;
         event.preventDefault();
         setKeyboardActiveThreadId((currentId) => {
@@ -1464,12 +1610,27 @@ function FolderResults({
 
       if (
         keyboardActiveThreadId &&
-        (event.key === "Enter" || event.key === " ") &&
+        (enabledKeybindMatchesEvent(
+          event,
+          keybinds.openThread,
+          preferences.singleKeyShortcuts,
+        ) ||
+          enabledKeybindMatchesEvent(
+            event,
+            keybinds.toggleSelect,
+            preferences.singleKeyShortcuts,
+          )) &&
         !(event.target instanceof Element &&
           event.target.closest("a, button, input, select, textarea"))
       ) {
         event.preventDefault();
-        if (event.key === " ") {
+        if (
+          enabledKeybindMatchesEvent(
+            event,
+            keybinds.toggleSelect,
+            preferences.singleKeyShortcuts,
+          )
+        ) {
           const next = new Set(selectedThreadIds);
           if (next.has(keyboardActiveThreadId)) {
             next.delete(keyboardActiveThreadId);
@@ -1490,8 +1651,11 @@ function FolderResults({
     account.id,
     folder,
     keyboardActiveThreadId,
+    onToggleActiveUnread,
     onToggleSelectedUnread,
     onSelectionChange,
+    openThreadComposer,
+    preferences.keybinds,
     preferences.singleKeyShortcuts,
     query,
     router,
@@ -1552,6 +1716,8 @@ function FolderResults({
             onMore={() => void loadMore()}
             density={preferences.density}
             messagePreview={preferences.messagePreview}
+            keybinds={preferences.keybinds}
+            singleKeyShortcuts={preferences.singleKeyShortcuts}
             emptyState={emptyState}
             selectedThreadIds={selectedThreadIds}
             keyboardActiveThreadId={keyboardActiveThreadId}
@@ -1609,6 +1775,7 @@ export function ThreadRoute({
     adjustStarredCounts,
     adjustUnreadCounts,
     userEmail,
+    sessionUser,
     ownEmails,
     userName,
     pending,
@@ -1624,6 +1791,8 @@ export function ThreadRoute({
     rememberFolderPage,
     getFolderPage,
     preferences,
+    threadComposeIntent,
+    clearThreadComposeIntent,
   } = useMailShell();
   const [replyMode, setReplyMode] = useState<ReplyMode | null>(null);
   const [animateReplyComposer, setAnimateReplyComposer] = useState(true);
@@ -1744,6 +1913,20 @@ export function ThreadRoute({
     [clearRecalled, effectiveReplyMode],
   );
 
+  useEffect(() => {
+    if (threadComposeIntent?.threadId !== detail.id) return;
+    const frame = window.requestAnimationFrame(() => {
+      updateReplyMode(threadComposeIntent.mode);
+      clearThreadComposeIntent();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    clearThreadComposeIntent,
+    detail.id,
+    threadComposeIntent,
+    updateReplyMode,
+  ]);
+
   const toggleThreadUnread = useCallback(() => {
     const unread = !threadUnread;
     setUnreadState({ threadId: detail.id, unread });
@@ -1773,54 +1956,53 @@ export function ThreadRoute({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      const keybinds = preferences.keybinds;
       if (
-        !preferences.singleKeyShortcuts ||
-        isTyping(event) ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey
+        isTyping(event)
       ) {
         return;
       }
-      const key = event.key.toLowerCase();
-      if (key === "r") {
+      if (
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.reply,
+          preferences.singleKeyShortcuts,
+        )
+      ) {
         event.preventDefault();
         updateReplyMode("reply");
         return;
       }
-      if (key === "f") {
+      if (
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.forward,
+          preferences.singleKeyShortcuts,
+        )
+      ) {
         event.preventDefault();
         updateReplyMode("forward");
         return;
       }
-      if (key === "u" && account.capabilities.includes("markUnread")) {
+      if (
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.toggleRead,
+          preferences.singleKeyShortcuts,
+        ) &&
+        account.capabilities.includes("markUnread")
+      ) {
         event.preventDefault();
         toggleThreadUnread();
         return;
-      }
-      if (key !== "j" && key !== "k") return;
-      event.preventDefault();
-      const index = navigationThreads.findIndex((thread) => thread.id === detail.id);
-      const nextIndex =
-        key === "j"
-          ? Math.min(navigationThreads.length - 1, index + 1)
-          : Math.max(0, index - 1);
-      const next = navigationThreads[nextIndex];
-      if (next && next.id !== detail.id) {
-        router.push(mailThreadHref(folder, next.id, query, account.id));
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [
     account.capabilities,
-    account.id,
-    detail.id,
-    folder,
-    navigationThreads,
+    preferences.keybinds,
     preferences.singleKeyShortcuts,
-    query,
-    router,
     toggleThreadUnread,
     updateReplyMode,
   ]);
@@ -1930,7 +2112,11 @@ export function ThreadRoute({
           detail={detail}
           userEmail={userEmail}
           ownEmails={ownEmails}
-          senderEmail={defaultSenderEmail(account.email, preferences.defaultSenderAlias)}
+          senderEmail={defaultSenderEmail(
+            account.email,
+            preferences.defaultSenderAlias,
+            sessionUser.email,
+          )}
           userName={userName}
           sending={sending}
           pending={pending}
@@ -1982,6 +2168,7 @@ export function DraftRoute({ detail }: { detail: ThreadDetail }) {
       bcc: message.bcc?.map((address) => address.email).join(", ") ?? "",
       subject: message.subject,
       text: message.text ?? "",
+      html: message.html,
       draftId: detail.draftId,
       attachments: message.attachments.flatMap((attachment) =>
         attachment.content

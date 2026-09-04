@@ -228,6 +228,17 @@ export function saveDemoSent(userId: string, thread: ThreadDetail) {
   return thread;
 }
 
+export function deleteDemoSent(userId: string, threadId: string) {
+  const data = load();
+  const current = data.sent[userId] ?? [];
+  const next = current.filter(
+    (item) => item.id !== threadId && item.draftId !== threadId,
+  );
+  data.sent[userId] = next;
+  persist();
+  return next.length !== current.length;
+}
+
 export function listDemoCollections(userId: string) {
   return load().collections[userId] ?? [];
 }

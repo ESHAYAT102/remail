@@ -1,3 +1,14 @@
+import {
+  DEFAULT_KEYBINDS,
+  keybindIds,
+  normalizeKeybinds,
+  normalizeKeyCombo,
+  type KeybindId,
+  type KeybindMap,
+} from "./mail/keybinds.ts";
+import { isMailView, type MailViewId } from "./mail/routes.ts";
+import { isValidSenderAlias, normalizeSenderAlias } from "./mail/sender-aliases.ts";
+
 export const themePreferences = ["system", "light", "dark"] as const;
 export const densityPreferences = ["comfortable", "compact"] as const;
 export const messagePreviewPreferences = ["hidden", "one", "two"] as const;
@@ -15,6 +26,7 @@ export type UserPreferences = {
   messagePreview: MessagePreviewPreference;
   defaultSenderAlias: string;
   defaultFolder: MailViewId;
+  keybinds: KeybindMap;
 };
 
 export const defaultUserPreferences: UserPreferences = {
@@ -26,6 +38,7 @@ export const defaultUserPreferences: UserPreferences = {
   messagePreview: "one",
   defaultSenderAlias: "",
   defaultFolder: "inbox",
+  keybinds: DEFAULT_KEYBINDS,
 };
 
 function includes<T extends string>(values: readonly T[], value: unknown): value is T {
@@ -66,6 +79,7 @@ export function normalizeUserPreferences(
       typeof value?.defaultFolder === "string" && isMailView(value.defaultFolder)
         ? value.defaultFolder
         : defaultUserPreferences.defaultFolder,
+    keybinds: normalizeKeybinds(value?.keybinds),
   };
 }
 
@@ -84,6 +98,7 @@ export function parseUserPreferencesPatch(value: unknown): Partial<UserPreferenc
     "messagePreview",
     "defaultSenderAlias",
     "defaultFolder",
+    "keybinds",
   ]);
   if (Object.keys(input).some((key) => !allowed.has(key as keyof UserPreferences))) {
     throw new Error("Choose a valid setting.");
@@ -140,9 +155,30 @@ export function parseUserPreferencesPatch(value: unknown): Partial<UserPreferenc
     }
     patch.defaultFolder = input.defaultFolder;
   }
+  if ("keybinds" in input) {
+    if (
+      !input.keybinds ||
+      typeof input.keybinds !== "object" ||
+      Array.isArray(input.keybinds)
+    ) {
+      throw new Error("Choose valid shortcuts.");
+    }
+    const entries = Object.entries(input.keybinds as Record<string, unknown>);
+    if (
+      entries.length === 0 ||
+      entries.some(
+        ([id, bindings]) =>
+          !keybindIds.includes(id as KeybindId) ||
+          !Array.isArray(bindings) ||
+          bindings.length === 0 ||
+          bindings.some((binding) => !normalizeKeyCombo(binding)),
+      )
+    ) {
+      throw new Error("Choose valid shortcuts.");
+    }
+    patch.keybinds = normalizeKeybinds(input.keybinds);
+  }
 
   if (Object.keys(patch).length === 0) throw new Error("Choose a setting to update.");
   return patch;
 }
-import { isValidSenderAlias, normalizeSenderAlias } from "./mail/sender-aliases.ts";
-import { isMailView, type MailViewId } from "./mail/routes.ts";

@@ -37,6 +37,10 @@ import {
   type ThreadSelectionTargets,
 } from "@/lib/mail/thread-selection";
 import type { ThreadDropTarget } from "@/lib/mail/thread-drag";
+import {
+  enabledKeybindMatchesEvent,
+  type KeybindMap,
+} from "@/lib/mail/keybinds";
 import { colors, fonts, radius, space } from "@/theme/tokens.stylex";
 import type { MailAccount, MailViewId, Thread } from "@/lib/mail/types";
 import type {
@@ -609,6 +613,8 @@ export function ThreadList({
   emptyState,
   density = "comfortable",
   messagePreview = "one",
+  keybinds,
+  singleKeyShortcuts,
   selectedThreadIds,
   keyboardActiveThreadId,
   onSelectionChange,
@@ -640,6 +646,8 @@ export function ThreadList({
   emptyState?: { title: string; hint: string };
   density?: DensityPreference;
   messagePreview?: MessagePreviewPreference;
+  keybinds: KeybindMap;
+  singleKeyShortcuts: boolean;
   selectedThreadIds: ReadonlySet<string>;
   keyboardActiveThreadId?: string | null;
   onSelectionChange: (selectedIds: Set<string>) => void;
@@ -757,14 +765,17 @@ export function ThreadList({
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || isTextEntry(event.target)) return;
       if (
-        (event.metaKey || event.ctrlKey) &&
-        !event.altKey &&
-        event.key.toLocaleLowerCase() === "a"
+        enabledKeybindMatchesEvent(
+          event,
+          keybinds.toggleSelectAll,
+          singleKeyShortcuts,
+        )
       ) {
         if (visibleIds.length === 0) return;
         event.preventDefault();
-        selectionAnchor.current = visibleIds[0];
-        onSelectionChange(new Set(visibleIds));
+        const allSelected = visibleIds.every((id) => selectedThreadIds.has(id));
+        selectionAnchor.current = allSelected ? null : visibleIds[0];
+        onSelectionChange(allSelected ? new Set() : new Set(visibleIds));
         return;
       }
       if (event.key === "Escape" && selectedThreadIds.size > 0) {
@@ -775,7 +786,13 @@ export function ThreadList({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onSelectionChange, selectedThreadIds.size, visibleIds]);
+  }, [
+    keybinds.toggleSelectAll,
+    onSelectionChange,
+    selectedThreadIds,
+    singleKeyShortcuts,
+    visibleIds,
+  ]);
 
   if (visible.length === 0 && !hasDepartingThreads) {
     return (

@@ -1,4 +1,5 @@
 import { getMailHostname } from "@/lib/env";
+import { parseAddressList } from "@/lib/mail/compose";
 import { verifyRecords } from "@/lib/dns/doh";
 import { parseZoneFile, synthesizeZone } from "@/lib/dns/parse-zone";
 import { summarizeRequiredDnsChecks } from "@/lib/dns/records";
@@ -11,6 +12,7 @@ import {
   setMailboxSecret,
 } from "@/lib/data/accounts";
 import {
+  deleteDemoSent,
   deleteDemoCollection,
   listDemoCollections,
   listDemoThreadFolders,
@@ -19,7 +21,6 @@ import {
 } from "@/lib/demo/store";
 import type { SessionUser } from "@/lib/session";
 import { collectFolderCounts } from "@/lib/mail/folder-counts";
-import { MailError } from "@/lib/mail/errors";
 import { folderCollectionTransfer } from "@/lib/mail/collections";
 import type { DomainProvider, MailProvider } from "@/lib/mail/provider";
 import type {
@@ -368,15 +369,53 @@ export function createDemoProvider(
         messages: [message],
       };
       await saveUserSent(user, thread);
+      if (input.draftId) deleteDemoSent(user.id, input.draftId);
       return { id: message.id, threadId: id, sentAt: now };
     },
 
-    async saveDraft() {
-      throw new MailError("Drafts are not available for this account yet.");
+    async saveDraft(input) {
+      const id = input.id ?? `draft_${crypto.randomUUID()}`;
+      const now = new Date().toISOString();
+      const thread: ThreadDetail = {
+        id,
+        draftId: id,
+        folder: "drafts",
+        subject: input.subject || "(no subject)",
+        from: { name: user.name, email: input.from ?? user.email },
+        snippet: input.text.replace(/\s+/g, " ").slice(0, 180),
+        date: now,
+        unread: false,
+        hasAttachment: Boolean(input.attachments?.length),
+        messageCount: 1,
+        messages: [
+          {
+            id,
+            threadId: id,
+            from: { name: user.name, email: input.from ?? user.email },
+            to: parseAddressList(input.to),
+            cc: parseAddressList(input.cc),
+            bcc: parseAddressList(input.bcc),
+            date: now,
+            subject: input.subject,
+            snippet: input.text.replace(/\s+/g, " ").slice(0, 180),
+            text: input.text,
+            html: input.html,
+            attachments: (input.attachments ?? []).map((file) => ({
+              id: crypto.randomUUID(),
+              filename: file.filename,
+              mimeType: file.mimeType,
+              size: file.size,
+              content: file.data,
+            })),
+          },
+        ],
+      };
+      await saveUserSent(user, thread);
+      return { id };
     },
 
-    async deleteDraft() {
-      return false;
+    async deleteDraft(id) {
+      return deleteDemoSent(user.id, id);
     },
 
     async listDomains() {

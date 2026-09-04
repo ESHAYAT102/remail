@@ -21,6 +21,7 @@ export const mailFolderIds = [
 export const mailSettingsSectionIds = [
   "account",
   "appearance",
+  "keybinds",
   "security",
 ] as const;
 

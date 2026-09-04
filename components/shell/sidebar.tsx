@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import * as stylex from "@stylexjs/stylex";
 import {
@@ -170,13 +170,6 @@ const styles = stylex.create({
     letterSpacing: fonts.captionTrack,
     fontWeight: 500,
   },
-  shortcut: {
-    marginInlineStart: "auto",
-    color: "color-mix(in oklch, currentcolor 72%, transparent)",
-    fontSize: fonts.microSize,
-    letterSpacing: fonts.microTrack,
-    fontVariantNumeric: "tabular-nums",
-  },
 });
 
 export const mailFolders: Array<{
@@ -185,7 +178,6 @@ export const mailFolders: Array<{
   icon: (typeof Icons)[keyof typeof Icons];
 }> = [
   { id: "inbox", label: "Inbox", icon: Icons.inbox },
-  { id: "smart", label: "Unread", icon: Icons.smart },
   { id: "starred", label: "Starred", icon: Icons.star },
   { id: "sent", label: "Sent", icon: Icons.sent },
   { id: "drafts", label: "Drafts", icon: Icons.drafts },
@@ -335,6 +327,14 @@ export function Sidebar({
   const collectionKind = "folder" as const;
   const collectionTitle = "Folders";
   const identity = account.email.split("@").at(-1) ?? account.email;
+
+  useEffect(() => {
+    const openCreateFolder = () => setCreateOpen(true);
+    window.addEventListener("redakt:create-folder", openCreateFolder);
+    return () =>
+      window.removeEventListener("redakt:create-folder", openCreateFolder);
+  }, []);
+
   return (
     <>
       <aside {...stylex.props(styles.root)}>
@@ -383,7 +383,6 @@ export function Sidebar({
         >
           <Icons.add size={15} />
           New email
-          <span {...stylex.props(styles.shortcut)}>⌥N</span>
         </Button>
       </div>
 
