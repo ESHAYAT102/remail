@@ -136,12 +136,6 @@ const styles = stylex.create({
     width: "auto",
     fontVariantNumeric: "tabular-nums",
   },
-  copyStatus: {
-    minHeight: fonts.captionLine,
-    fontSize: fonts.captionSize,
-    lineHeight: fonts.captionLine,
-    color: colors.textFaint,
-  },
   error: {
     fontSize: fonts.captionSize,
     color: colors.text,
@@ -499,36 +493,33 @@ export function Onboarding({
                       {...stylex.props(styles.input, styles.endpointInput)}
                       value={RESEND_WEBHOOK_URL}
                       readOnly
-                      aria-describedby="onboard-resend-endpoint-help onboard-resend-copy-status"
+                      aria-describedby="onboard-resend-endpoint-help"
                       onFocus={(event) => event.currentTarget.select()}
                     />
                     <Button
                       type="button"
                       variant="soft"
+                      aria-live="polite"
                       onClick={async () => {
                         try {
                           await navigator.clipboard.writeText(RESEND_WEBHOOK_URL);
-                          setCopyStatus("Webhook URL copied.");
+                          setCopyStatus("copied");
                         } catch {
-                          setCopyStatus("Couldn’t copy automatically. Select and copy the URL.");
+                          setCopyStatus("failed");
                         }
                       }}
                     >
-                      {copyStatus === "Webhook URL copied." ? "Copied" : "Copy"}
+                      {copyStatus === "copied"
+                        ? "Copied"
+                        : copyStatus === "failed"
+                          ? "Copy manually"
+                          : "Copy"}
                     </Button>
                   </div>
                 </div>
                 <div id="onboard-resend-endpoint-help" {...stylex.props(styles.hint)}>
                   In Resend, create an email.received webhook and paste this into
                   the Endpoint URL field.
-                </div>
-                <div
-                  id="onboard-resend-copy-status"
-                  role="status"
-                  aria-live="polite"
-                  {...stylex.props(styles.copyStatus)}
-                >
-                  {copyStatus}
                 </div>
               </>
             ) : null}
