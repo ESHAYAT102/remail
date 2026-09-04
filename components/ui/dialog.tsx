@@ -7,6 +7,8 @@ import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 const styles = stylex.create({
   backdrop: {
     backgroundColor: "oklch(0 0 0 / 0.4)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     position: "fixed",
     inset: 0,
     zIndex: 9999,
