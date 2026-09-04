@@ -113,11 +113,23 @@ export async function setMailboxSecret(
 
 export async function deleteUserMailData(userId: string) {
   const domainRows = await db().select().from(domains).where(eq(domains.userId, userId));
-  for (const domain of domainRows) {
-    const result = await (await getResend(userId)).domains.remove(domain.id);
-    if (result.error && result.error.name !== "not_found") {
-      throw new Error(result.error.message);
+  try {
+    const resend = await getResend(userId);
+    for (const domain of domainRows) {
+      const result = await resend.domains.remove(domain.id);
+      if (result.error && result.error.name !== "not_found") {
+        console.warn("Unable to remove Resend domain during account deletion", {
+          domainId: domain.id,
+          error: result.error.name,
+        });
+      }
     }
+  } catch (error) {
+    // A revoked or expired provider credential must not prevent users from
+    // deleting their local account and all data covered by database cascades.
+    console.warn("Skipping Resend cleanup during account deletion", {
+      error: error instanceof Error ? error.name : "unknown",
+    });
   }
 }
 
