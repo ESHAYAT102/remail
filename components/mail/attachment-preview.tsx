@@ -6,6 +6,7 @@ import { Icons } from "@/components/ui/icons";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { bytes } from "@/lib/format";
 import type { Attachment } from "@/lib/mail/types";
+import { SpreadsheetPreview, isSpreadsheet } from "./spreadsheet-preview";
 
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"]);
 const PDF_TYPE = "application/pdf";
@@ -205,6 +206,7 @@ export function AttachmentPreview({
 
   const image = isImage(attachment.mimeType);
   const pdf = isPdf(attachment.mimeType);
+  const spreadsheet = isSpreadsheet(attachment.mimeType, attachment.filename);
   const href = downloadHref(attachment, accountId);
 
   return (
@@ -254,6 +256,8 @@ export function AttachmentPreview({
               borderRadius: radius.lg,
             }}
           />
+        ) : spreadsheet ? (
+          <SpreadsheetPreview attachment={attachment} accountId={accountId} />
         ) : (
           <div {...stylex.props(styles.nonImage)}>
             <div {...stylex.props(styles.fileIcon)}>
