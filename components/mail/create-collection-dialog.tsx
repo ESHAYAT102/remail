@@ -111,6 +111,9 @@ const styles = stylex.create({
     flexDirection: "column",
     gap: space[3],
   },
+  appearancePositioner: {
+    zIndex: 10001,
+  },
   appearanceTitle: {
     color: colors.text,
     fontSize: fonts.uiSize,
@@ -401,7 +404,11 @@ function CollectionDialog({
                     <FolderMark color={color} icon={icon} size="preview" />
                   </Popover.Trigger>
                   <Popover.Portal>
-                    <Popover.Positioner sideOffset={8} align="end">
+                    <Popover.Positioner
+                      sideOffset={8}
+                      align="end"
+                      {...stylex.props(styles.appearancePositioner)}
+                    >
                       <Popover.Popup>
                         <div {...stylex.props(styles.appearance)}>
                           <Popover.Title {...stylex.props(styles.appearanceTitle)}>

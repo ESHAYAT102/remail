@@ -6,7 +6,7 @@ import { colors, elevation, radius, space } from "@/theme/tokens.stylex";
 
 const styles = stylex.create({
   positioner: {
-    zIndex: 30,
+    zIndex: 10001,
     maxWidth: "calc(100vw - 24px)",
   },
   popup: {
