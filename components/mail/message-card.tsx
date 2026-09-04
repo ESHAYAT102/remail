@@ -1,13 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import * as stylex from "@stylexjs/stylex";
 import { Avatar } from "@/components/ui/avatar";
 import { Icons } from "@/components/ui/icons";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
 import { bytes, formatTime, formatWhen } from "@/lib/format";
-import type { Address, Message } from "@/lib/mail/types";
+import type { Address, Attachment, Message } from "@/lib/mail/types";
 import type { ThemePreference } from "@/lib/preferences";
 import { MessageBody } from "./message-body";
+import { AttachmentPreview } from "./attachment-preview";
 
 /** How far the attachment tray tucks under the card's bottom corners. */
 const radiusOverlap = 20;
@@ -110,7 +112,10 @@ const styles = stylex.create({
     fontSize: fonts.captionSize,
     lineHeight: fonts.captionLine,
     color: colors.textMuted,
-    textDecoration: "none",
+    border: "none",
+    cursor: "pointer",
+    textAlign: "start",
+    width: "auto",
     "@media (prefers-reduced-motion: no-preference)": {
       transitionProperty: "color, background-color",
       transitionDuration: "150ms",
@@ -211,46 +216,53 @@ export function MessageCard({
   const isMe = message.from.email === userEmail;
   const files = message.attachments.filter((file) => !file.inline);
   const to = audience(message, userEmail);
-  // Names both the card and the body frame, so entering the frame does not
-  // lose track of who is speaking.
   const senderId = `msg-from-${message.id}`;
+  const [previewFile, setPreviewFile] = useState<Attachment | null>(null);
 
   return (
-    <MessageCardFrame
-      senderId={senderId}
-      avatarName={message.from.email}
-      senderLabel={isMe ? "You" : sender}
-      senderTitle={message.from.email}
-      audience={to}
-      date={message.date}
-      after={
-        files.length > 0 ? (
-          <div {...stylex.props(styles.tray)}>
-            {files.map((file) => (
-              <a
-                key={file.id}
-                href={`/api/mail/attachments/${encodeURIComponent(file.id)}?account=${encodeURIComponent(accountId)}&filename=${encodeURIComponent(file.filename)}`}
-                download={file.filename}
-                {...stylex.props(styles.file)}
-              >
-                <Icons.attach size={14} />
-                <span {...stylex.props(styles.fileName)}>{file.filename}</span>
-                <span {...stylex.props(styles.fileSize)}>{bytes(file.size)}</span>
-              </a>
-            ))}
-          </div>
-        ) : null
-      }
-    >
-      <MessageBody
-        html={message.html}
-        text={message.text}
-        attachments={message.attachments}
-        label={`Message from ${sender}`}
-        labelledBy={senderId}
-        loadRemoteImages={loadRemoteImages}
-        theme={theme}
+    <>
+      <MessageCardFrame
+        senderId={senderId}
+        avatarName={message.from.email}
+        senderLabel={isMe ? "You" : sender}
+        senderTitle={message.from.email}
+        audience={to}
+        date={message.date}
+        after={
+          files.length > 0 ? (
+            <div {...stylex.props(styles.tray)}>
+              {files.map((file) => (
+                <button
+                  key={file.id}
+                  type="button"
+                  onClick={() => setPreviewFile(file)}
+                  {...stylex.props(styles.file)}
+                >
+                  <Icons.attach size={14} />
+                  <span {...stylex.props(styles.fileName)}>{file.filename}</span>
+                  <span {...stylex.props(styles.fileSize)}>{bytes(file.size)}</span>
+                </button>
+              ))}
+            </div>
+          ) : null
+        }
+      >
+        <MessageBody
+          html={message.html}
+          text={message.text}
+          attachments={message.attachments}
+          label={`Message from ${sender}`}
+          labelledBy={senderId}
+          loadRemoteImages={loadRemoteImages}
+          theme={theme}
+        />
+      </MessageCardFrame>
+      <AttachmentPreview
+        attachment={previewFile ?? files[0]}
+        accountId={accountId}
+        open={previewFile !== null}
+        onClose={() => setPreviewFile(null)}
       />
-    </MessageCardFrame>
+    </>
   );
 }
