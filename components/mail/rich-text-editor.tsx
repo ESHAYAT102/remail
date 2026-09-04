@@ -274,6 +274,7 @@ export function RichTextEditor({
   autoFocus = false,
   autoFocusSelection = "rootEnd",
   suppressFocusRing = false,
+  tabIndex,
   onEscape,
   onSubmit,
 }: {
@@ -282,6 +283,7 @@ export function RichTextEditor({
   autoFocus?: boolean;
   autoFocusSelection?: "rootStart" | "rootEnd";
   suppressFocusRing?: boolean;
+  tabIndex?: number;
   onEscape?: () => void;
   onSubmit?: () => void;
 }) {
@@ -298,6 +300,7 @@ export function RichTextEditor({
             <ContentEditable
               aria-label="Message"
               spellCheck
+              tabIndex={tabIndex}
               data-suppress-focus-ring={suppressFocusRing || undefined}
               {...stylex.props(styles.editor, expanded && styles.editorExpanded)}
               onKeyDown={(event) => {

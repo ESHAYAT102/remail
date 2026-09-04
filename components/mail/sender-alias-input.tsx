@@ -121,6 +121,7 @@ export function SenderAliasInput({
   placement = "below",
   disabled,
   raised = false,
+  tabIndex,
   onChange,
   onCommit,
 }: {
@@ -130,6 +131,7 @@ export function SenderAliasInput({
   placement?: "above" | "below";
   disabled?: boolean;
   raised?: boolean;
+  tabIndex?: number;
   onChange: (value: string) => void;
   onCommit?: (value: string) => void;
 }) {
@@ -150,6 +152,7 @@ export function SenderAliasInput({
       <div {...stylex.props(styles.control, raised && settingsControlStyle, raised && styles.controlRaised)}>
         <input
           id={id}
+          tabIndex={tabIndex}
           data-border-focus=""
           role="combobox"
           aria-autocomplete="list"
@@ -235,12 +238,14 @@ export function SenderField({
   value,
   placement,
   raised,
+  tabIndex,
   onChange,
 }: {
   id: string;
   value: string;
   placement?: "above" | "below";
   raised?: boolean;
+  tabIndex?: number;
   onChange: (value: string) => void;
 }) {
   const separator = value.lastIndexOf("@");
@@ -258,6 +263,7 @@ export function SenderField({
         domain={domain}
         placement={placement}
         raised={raised}
+        tabIndex={tabIndex}
         onChange={(alias) => onChange(`${alias}@${domain}`)}
       />
     </div>

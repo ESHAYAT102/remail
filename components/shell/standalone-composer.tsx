@@ -25,6 +25,8 @@ const styles = stylex.create({
     position: "fixed",
     inset: 0,
     backgroundColor: "oklch(0 0 0 / 0.56)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     overscrollBehavior: "contain",
   },
   popup: {
@@ -479,6 +481,7 @@ function AddressField({
   extra,
   errorId,
   inputRef,
+  tabIndex,
   onChange,
   onEdit,
 }: {
@@ -490,6 +493,7 @@ function AddressField({
   extra?: React.ReactNode;
   errorId?: string;
   inputRef?: React.RefObject<HTMLInputElement | null>;
+  tabIndex?: number;
   onChange: (value: string) => void;
   onEdit?: () => void;
 }) {
@@ -528,6 +532,8 @@ function AddressField({
         <input
           id={id}
           ref={inputRef}
+          tabIndex={tabIndex}
+          data-suppress-focus-ring
           data-border-focus=""
           {...stylex.props(styles.field, styles.placeholder)}
           name={id}
@@ -759,12 +765,14 @@ export function StandaloneComposer({
                   id="compose-from"
                   value={draft.from ?? senderEmail}
                   raised
+                  tabIndex={1}
                   onChange={(from) => editDraft({ from })}
                 />
               ) : null}
               <AddressField
                 id="compose-to"
                 inputRef={toRef}
+                tabIndex={2}
                 label="To"
                 value={draft.to}
                 placeholder="recipient@example.com"
@@ -841,6 +849,8 @@ export function StandaloneComposer({
                 <span className="sr-only">Subject</span>
                 <input
                   {...stylex.props(styles.subject, styles.placeholder)}
+                  tabIndex={3}
+                  data-suppress-focus-ring
                   name="subject"
                   placeholder="Subject"
                   value={draft.subject}
@@ -851,6 +861,8 @@ export function StandaloneComposer({
                 <RichTextEditor
                   placeholder="Write your message…"
                   expanded
+                  tabIndex={4}
+                  suppressFocusRing
                   onSubmit={() => void submit()}
                 />
               </div>
