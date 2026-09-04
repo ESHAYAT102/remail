@@ -110,6 +110,8 @@ const styles = stylex.create({
     margin: space[4],
     borderRadius: radius.xl,
     backgroundColor: "oklch(0 0 0 / 0.08)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     border: `2px dashed ${colors.accent}`,
     pointerEvents: "none",
     zIndex: 10,

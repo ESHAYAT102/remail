@@ -51,6 +51,8 @@ const styles = stylex.create({
     inset: 0,
     borderRadius: radius["2xl"],
     backgroundColor: "oklch(0 0 0 / 0.08)",
+    backdropFilter: "blur(12px)",
+    WebkitBackdropFilter: "blur(12px)",
     border: `2px dashed ${colors.accent}`,
     pointerEvents: "none",
     zIndex: 10,
