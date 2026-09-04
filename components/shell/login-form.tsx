@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as stylex from "@stylexjs/stylex";
-import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 import { Button } from "@/components/ui/button";
 import { colors, fonts, radius, space } from "@/theme/tokens.stylex";
 import { authClient } from "@/lib/auth-client";
@@ -107,42 +106,15 @@ const styles = stylex.create({
       minHeight: 44,
     },
   },
-  separator: {
-    display: "flex",
-    alignItems: "center",
-    gap: space[2],
-    color: colors.textFaint,
-    fontSize: fonts.captionSize,
-    "::before": {
-      content: '""',
-      height: 1,
-      flex: 1,
-      backgroundColor: colors.line,
-    },
-    "::after": {
-      content: '""',
-      height: 1,
-      flex: 1,
-      backgroundColor: colors.line,
-    },
-  },
-  providerStatus: {
-    color: colors.textFaint,
-    fontSize: fonts.captionSize,
-    lineHeight: fonts.captionLine,
-    textAlign: "center",
-  },
 });
 
 export function LoginForm({
   initialLogin,
   initialError,
-  googleEnabled,
   addingAccount = false,
 }: {
   initialLogin: LoginFields;
   initialError?: string;
-  googleEnabled: boolean;
   addingAccount?: boolean;
 }) {
   const router = useRouter();
@@ -252,19 +224,6 @@ export function LoginForm({
               : "Preparing account switcher…"
             : "Open inbox"}
         </Button>
-        <div aria-hidden="true" {...stylex.props(styles.separator)}>
-          or
-        </div>
-        <GoogleSignInButton
-          disabled={!googleEnabled || !accountReady}
-          addingAccount={addingAccount}
-          onStart={() => setError("")}
-        />
-        {!googleEnabled ? (
-          <p {...stylex.props(styles.providerStatus)}>
-            Google sign-in will be available once OAuth is configured.
-          </p>
-        ) : null}
       </div>
       <div {...stylex.props(styles.secondaryActions)}>
         <button

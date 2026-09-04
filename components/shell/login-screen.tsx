@@ -283,12 +283,10 @@ function shuffleRanks(length: number) {
 export function LoginScreen({
   initialLogin,
   initialError,
-  googleEnabled,
   addingAccount = false,
 }: {
   initialLogin: LoginFields;
   initialError?: string;
-  googleEnabled: boolean;
   addingAccount?: boolean;
 }) {
   const reduce = useReducedMotion();
@@ -318,7 +316,6 @@ export function LoginScreen({
         <LoginForm
           initialLogin={initialLogin}
           initialError={initialError}
-          googleEnabled={googleEnabled}
           addingAccount={addingAccount}
         />
         <nav aria-label="Legal" {...stylex.props(styles.legalNav)}>

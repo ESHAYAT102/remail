@@ -14,17 +14,6 @@ export function getStalwartConfig() {
   };
 }
 
-export function getGoogleOAuthConfig() {
-  const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) return null;
-  return { clientId, clientSecret };
-}
-
-export function areGoogleCtasEnabled() {
-  return Boolean(getGoogleOAuthConfig());
-}
-
 export function getAppUrl() {
   const configured = process.env.BETTER_AUTH_URL?.trim();
   if (!configured) {

@@ -19,7 +19,7 @@ When changing UI, copy, layout, color, typography, motion, or accessibility, loa
 # Project architecture
 
 - Remail is a Next.js 16 email client using React, TypeScript, StyleX, Drizzle, Better Auth, Resend, and Stalwart.
-- Google is identity-only. Do not add Gmail mailbox access or request Google mailbox scopes.
+- Sign-in is email and password only. Do not add social or OAuth providers, Gmail mailbox access, or third-party mailbox scopes.
 - Hosted sender aliases may use any valid local part on a domain owned by the signed-in user. Keep server-side ownership validation in place.
 - Internal `redakt_*` storage keys and persisted database names are compatibility-sensitive. Do not rename them for branding cleanup.
 - Keep secrets out of source, logs, diffs, and responses. `BETTER_AUTH_URL` in production must remain `https://mail.eshayat.com`.

@@ -53,11 +53,11 @@ const sections: LegalSectionContent[] = [
         type: "paragraph",
         content: (
           <>
-            If you use Google sign-in, your use of Google services remains subject
-            to Google&apos;s terms and policies. Remail uses identity data as described
-            in the <LegalLink href="/privacy">Privacy policy</LegalLink>. Third-party
+            Remail relies on third-party infrastructure such as hosting,
+            database, mail-delivery, and DNS providers to operate. Those
             services may change, suspend, or stop their APIs, which can affect
-            Remail features.
+            Remail features. Your use of any third-party service remains subject
+            to that provider&apos;s own terms.
           </>
         ),
       },
@@ -90,7 +90,7 @@ const sections: LegalSectionContent[] = [
         items: [
           "Break the law, violate another person's rights, or send unlawful, deceptive, abusive, or unsolicited bulk mail.",
           "Distribute malware, phishing content, or material intended to compromise accounts, devices, or networks.",
-          "Evade sending limits, spam controls, security controls, or restrictions imposed by Remail, Google, or another provider.",
+          "Evade sending limits, spam controls, security controls, or restrictions imposed by Remail or another provider.",
           "Probe or disrupt the service, gain unauthorized access, or use automated traffic that unreasonably burdens the service.",
           "Misrepresent your identity, impersonate another person, or connect a mailbox or domain without authorization.",
         ],
@@ -113,7 +113,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "Remail may add, change, limit, or discontinue features. We aim to keep the service reliable, but email delivery and connected-account access depend on networks, DNS, Google, mail servers, and other systems outside Remail's control. We do not promise uninterrupted, error-free, or permanent availability. Reasonable notice will be provided before material negative changes when practical, except for urgent security, abuse, legal, or operational issues.",
+          "Remail may add, change, limit, or discontinue features. We aim to keep the service reliable, but email delivery and connected-account access depend on networks, DNS, mail servers, and other systems outside Remail's control. We do not promise uninterrupted, error-free, or permanent availability. Reasonable notice will be provided before material negative changes when practical, except for urgent security, abuse, legal, or operational issues.",
       },
     ],
   },

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
-import { areGoogleCtasEnabled, isDemoMode } from "@/lib/env";
+import { isDemoMode } from "@/lib/env";
 import { getInitialLoginFields } from "@/lib/login";
 import { LoginScreen } from "@/components/shell/login-screen";
 import { resolveMailAccount } from "@/lib/mail/accounts";
@@ -22,17 +22,9 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
     redirect(mailFolderHref("inbox", undefined, account.id));
   }
 
-  const googleEnabled = areGoogleCtasEnabled();
-
   return (
     <LoginScreen
       initialLogin={getInitialLoginFields(demoMode)}
-      initialError={
-        googleEnabled && search.auth === "google"
-          ? "Google sign-in wasn’t completed. Try again when you’re ready."
-          : undefined
-      }
-      googleEnabled={googleEnabled}
       addingAccount={addingAccount}
     />
   );

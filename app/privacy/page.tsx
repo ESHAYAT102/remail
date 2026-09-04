@@ -9,7 +9,7 @@ import {
 export const metadata: Metadata = {
   title: "Privacy policy",
   description:
-    "How Remail accesses, uses, stores, shares, and deletes personal and Google user data.",
+    "How Remail accesses, uses, stores, shares, and deletes personal data.",
 };
 
 const sections: LegalSectionContent[] = [
@@ -41,18 +41,13 @@ const sections: LegalSectionContent[] = [
         items: [
           <span key="account">
             <strong>Account information.</strong> Your name, email address,
-            profile image, sign-in method, password hash when you use a password,
-            account preferences, and account creation and update times.
+            profile image, password hash, account preferences, and account
+            creation and update times.
           </span>,
           <span key="session">
             <strong>Session and security information.</strong> Session tokens,
             session expiry, IP address, user agent, and operational logs needed to
             secure and troubleshoot the service.
-          </span>,
-          <span key="google">
-            <strong>Google account information.</strong> If you use Google
-            sign-in, Remail receives your Google account identifier, email
-            address, name, and profile image.
           </span>,
           <span key="hosted">
             <strong>Hosted-mail information.</strong> If you use a custom domain,
@@ -81,49 +76,17 @@ const sections: LegalSectionContent[] = [
     ],
   },
   {
-    title: "Google sign-in",
+    title: "Authentication",
     blocks: [
       {
         type: "paragraph",
-        content: (
-          <>
-            Google sign-in requests only basic identity information: your account
-            identifier, email address, name, and profile image. Remail does not
-            request access to your Google mailbox.
-          </>
-        ),
+        content:
+          "Remail accounts sign in with an email address and password. Remail stores a password hash, never the password itself, and uses it only to verify sign-in attempts.",
       },
       {
         type: "paragraph",
-        content: (
-          <>
-            Remail stores the account identity and authentication data needed to
-            sign you in securely.
-          </>
-        ),
-      },
-      {
-        type: "paragraph",
-        content: (
-          <>
-            Remail does not sell Google user data, use it for advertising,
-            determine creditworthiness, or use it to train general-purpose AI or
-            machine-learning models.
-          </>
-        ),
-      },
-      {
-        type: "paragraph",
-        content: (
-          <>
-            Remail&apos;s use and transfer of information received from Google APIs
-            will adhere to the{" "}
-            <LegalLink href="https://developers.google.com/terms/api-services-user-data-policy">
-              Google API Services User Data Policy
-            </LegalLink>
-            , including its Limited Use requirements.
-          </>
-        ),
+        content:
+          "Remail does not sell personal information, use it for advertising, determine creditworthiness, or use it to train general-purpose AI or machine-learning models.",
       },
     ],
   },
@@ -138,12 +101,11 @@ const sections: LegalSectionContent[] = [
       {
         type: "list",
         items: [
-          "With Google when you choose Google sign-in.",
           "With infrastructure providers that host the application, database, mail server, networking, or security services, subject to their role in operating Remail.",
           "With Resend when you send mail through a connected Resend API key, so the message can be delivered.",
           "When you direct Remail to send mail or otherwise share content with a recipient.",
           "When required by applicable law or necessary to protect users, Remail, or the public from fraud, abuse, or security threats.",
-          "As part of a merger, acquisition, or sale of assets only after any consent required by the Google user-data rules or applicable law is obtained.",
+          "As part of a merger, acquisition, or sale of assets, subject to applicable law.",
         ],
       },
     ],
@@ -159,19 +121,11 @@ const sections: LegalSectionContent[] = [
       {
         type: "list",
         items: [
-          <span key="google">
-            <strong>Revoke at Google:</strong> You can also remove Remail from your{" "}
-            <LegalLink href="https://myaccount.google.com/connections">
-              Google Account connections
-            </LegalLink>
-            .
-          </span>,
           <span key="delete">
             <strong>Delete Remail:</strong> Open Settings, choose Account, then
             delete the account. This removes the Remail account and its local
             settings, sessions, connected-account records, custom domains, and
-            hosted-mail data. Remove Remail from Google Account connections if
-            you also want to confirm the Google grant is revoked.
+            hosted-mail data.
           </span>,
         ],
       },
@@ -183,7 +137,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "Remail uses HTTPS in transit, encrypted OAuth tokens and mailbox credentials at rest, access controls, and other reasonable safeguards. No online service can guarantee absolute security, so you should use a strong password, protect your Google account, and report suspected unauthorized access promptly.",
+          "Remail uses HTTPS in transit, encrypted mailbox credentials at rest, access controls, and other reasonable safeguards. No online service can guarantee absolute security, so you should use a strong, unique password and report suspected unauthorized access promptly.",
       },
     ],
   },
@@ -193,7 +147,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "Remail uses necessary cookies for authentication, security, and saved preferences. It may use browser storage to remember interface state such as open mailbox tabs. Remail does not use third-party advertising cookies. Google may use its own cookies when you choose Google sign-in, subject to Google's policies.",
+          "Remail uses necessary cookies for authentication, security, and saved preferences. It may use browser storage to remember interface state such as open mailbox tabs. Remail does not use third-party advertising cookies.",
       },
       {
         type: "paragraph",
@@ -208,7 +162,7 @@ const sections: LegalSectionContent[] = [
       {
         type: "paragraph",
         content:
-          "You can update your name and preferences, revoke Google sign-in access, or delete your Remail account from Settings. Depending on where you live, you may also have rights to access, correct, delete, restrict, or receive a copy of personal information. Contact Remail to make a request. Identity verification may be required before a request is completed.",
+          "You can update your name and preferences or delete your Remail account from Settings. Depending on where you live, you may also have rights to access, correct, delete, restrict, or receive a copy of personal information. Contact Remail to make a request. Identity verification may be required before a request is completed.",
       },
     ],
   },
