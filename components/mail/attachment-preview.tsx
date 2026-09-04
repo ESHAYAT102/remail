@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import * as stylex from "@stylexjs/stylex";
 import { Icons } from "@/components/ui/icons";
 import { colors, elevation, fonts, radius, space } from "@/theme/tokens.stylex";
@@ -11,6 +12,8 @@ import { SpreadsheetPreview, isSpreadsheet } from "./spreadsheet-preview";
 const IMAGE_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp", "image/svg+xml"]);
 const PDF_TYPE = "application/pdf";
 
+/* Portalled to document.body at z 20000 so it sits above the sidebar,
+   the tab rail, and every compose dialog. */
 const styles = stylex.create({
   backdrop: {
     backgroundColor: "oklch(0 0 0 / 0.5)",
@@ -18,26 +21,41 @@ const styles = stylex.create({
     WebkitBackdropFilter: "blur(24px)",
     position: "fixed",
     inset: 0,
-    zIndex: 10000,
-    overscrollBehavior: "contain",
-    "@media (prefers-reduced-motion: no-preference)": {
-      transitionProperty: "opacity",
-      transitionDuration: "150ms",
-      transitionTimingFunction: "ease-out",
-    },
-    "[data-starting-style]": { opacity: 0 },
-    "[data-ending-style]": { opacity: 0 },
-  },
-  popup: {
-    position: "fixed",
-    inset: 0,
-    zIndex: 10001,
+    zIndex: 20000,
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     padding: space[4],
-    outline: "none",
+    overscrollBehavior: "contain",
+    opacity: 0,
+    "@media (prefers-reduced-motion: no-preference)": {
+      transitionProperty: "opacity",
+      transitionDuration: "200ms",
+      transitionTimingFunction: "ease-out",
+    },
+  },
+  backdropShown: {
+    opacity: 1,
+  },
+  content: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    maxWidth: "100%",
+    maxHeight: "100%",
+    transform: "scale(0.92)",
+    opacity: 0,
+    "@media (prefers-reduced-motion: no-preference)": {
+      transitionProperty: "transform, opacity",
+      transitionDuration: "200ms",
+      transitionTimingFunction: "ease-out",
+    },
+  },
+  contentShown: {
+    transform: "scale(1)",
+    opacity: 1,
   },
   toolbar: {
     position: "fixed",
@@ -48,14 +66,8 @@ const styles = stylex.create({
     alignItems: "center",
     justifyContent: "flex-end",
     padding: `${space[3]} ${space[4]}`,
-    zIndex: 10002,
     backgroundColor: "transparent",
     color: "#fff",
-  },
-  actions: {
-    display: "flex",
-    alignItems: "center",
-    gap: space[2],
   },
   image: {
     maxWidth: "90vw",
@@ -63,6 +75,13 @@ const styles = stylex.create({
     objectFit: "contain",
     borderRadius: radius.lg,
     boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+  },
+  frame: {
+    width: "90vw",
+    height: "calc(100vh - 80px)",
+    borderWidth: 0,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface,
   },
   nonImage: {
     display: "flex",
@@ -137,6 +156,8 @@ function isPdf(mimeType: string) {
   return mimeType === PDF_TYPE;
 }
 
+const EXIT_MS = 200;
+
 export function AttachmentPreview({
   attachment,
   accountId,
@@ -148,7 +169,36 @@ export function AttachmentPreview({
   open: boolean;
   onClose: () => void;
 }) {
-  const backdropRef = useRef<HTMLDivElement>(null);
+  const [portalled, setPortalled] = useState(false);
+  if (!portalled && typeof document !== "undefined") {
+    setPortalled(true);
+  }
+  /* Stay mounted briefly after `open` flips false so the scale-down
+     exit animation can play before unmount. State adjusts during render
+     (the documented derived-state pattern) so no effect sets state
+     synchronously. */
+  const [render, setRender] = useState(open);
+  const [shown, setShown] = useState(false);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (prevOpen !== open) {
+    setPrevOpen(open);
+    setShown(false);
+    if (open) setRender(true);
+  }
+
+  useEffect(() => {
+    if (!open || !render) return;
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setShown(true)),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [open, render]);
+
+  useEffect(() => {
+    if (open || !render) return;
+    const timer = setTimeout(() => setRender(false), EXIT_MS);
+    return () => clearTimeout(timer);
+  }, [open, render]);
 
   useEffect(() => {
     if (!open) return;
@@ -156,42 +206,43 @@ export function AttachmentPreview({
       if (e.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", handler);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [open, onClose]);
 
-  const handleBackdropClick = useCallback(
-    (e: React.MouseEvent) => {
-      if (e.target === backdropRef.current) onClose();
-    },
-    [onClose],
-  );
-
-  if (!open) return null;
+  if (!portalled || !render) return null;
 
   const image = isImage(attachment.mimeType);
   const pdf = isPdf(attachment.mimeType);
   const spreadsheet = isSpreadsheet(attachment.mimeType, attachment.filename);
   const href = downloadHref(attachment, accountId);
 
-  return (
+  const node = (
     <div
-      ref={backdropRef}
-      {...stylex.props(styles.backdrop)}
-      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Preview of ${attachment.filename}`}
+      {...stylex.props(styles.backdrop, shown && styles.backdropShown)}
+      onClick={onClose}
     >
-      <div {...stylex.props(styles.popup)}>
-        <div {...stylex.props(styles.toolbar)}>
-          <div {...stylex.props(styles.actions)}>
-            <a
-              href={href}
-              download={attachment.filename}
-              {...stylex.props(styles.downloadBtn)}
-            >
-              <Icons.download size={14} />
-              Download
-            </a>
-          </div>
-        </div>
+      <div {...stylex.props(styles.toolbar)} onClick={(e) => e.stopPropagation()}>
+        <a
+          href={href}
+          download={attachment.filename}
+          {...stylex.props(styles.downloadBtn)}
+        >
+          <Icons.download size={14} />
+          Download
+        </a>
+      </div>
+      <div
+        {...stylex.props(styles.content, shown && styles.contentShown)}
+        onClick={(e) => e.stopPropagation()}
+      >
         {image ? (
           <img
             src={href}
@@ -202,12 +253,7 @@ export function AttachmentPreview({
           <iframe
             src={href}
             title={attachment.filename}
-            style={{
-              width: "90vw",
-              height: "calc(100vh - 80px)",
-              border: "none",
-              borderRadius: radius.lg,
-            }}
+            {...stylex.props(styles.frame)}
           />
         ) : spreadsheet ? (
           <SpreadsheetPreview attachment={attachment} accountId={accountId} />
@@ -231,4 +277,6 @@ export function AttachmentPreview({
       </div>
     </div>
   );
+
+  return createPortal(node, document.body);
 }

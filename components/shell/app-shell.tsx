@@ -559,12 +559,13 @@ export function AppShell({
     (folder: string, unread: boolean, direction: 1 | -1) => {
       const source = folder === "smart" ? "inbox" : isMailFolder(folder) ? folder : null;
       if (!source || source === "archived") return;
+      // Badges show unread threads, so read threads move silently.
+      if (!unread) return;
       setFolderCountDeltas((current) => ({
         ...current,
         [source]: (current[source] ?? 0) - direction,
         archived: (current.archived ?? 0) + direction,
-        smart:
-          (current.smart ?? 0) + (source === "inbox" && unread ? -direction : 0),
+        smart: (current.smart ?? 0) + (source === "inbox" ? -direction : 0),
       }));
     },
     [],
@@ -579,14 +580,16 @@ export function AppShell({
     ) => {
       const source = folder === "smart" ? "inbox" : isMailFolder(folder) ? folder : null;
       if (!source || source === destination) return;
+      // Badges show unread threads, so read threads move silently.
+      if (!unread) return;
       setFolderCountDeltas((current) => ({
         ...current,
         [source]: (current[source] ?? 0) - direction,
         [destination]: (current[destination] ?? 0) + direction,
         smart:
           (current.smart ?? 0) +
-          (unread && source === "inbox" ? -direction : 0) +
-          (unread && destination === "inbox" ? direction : 0),
+          (source === "inbox" ? -direction : 0) +
+          (destination === "inbox" ? direction : 0),
       }));
     },
     [],
@@ -1809,7 +1812,7 @@ export function ThreadRoute({
             onArchive={async () => {
               await persistThreadArchive(account.id, detail.id, folder);
               await invalidateMailAccountCache(account.id);
-              adjustArchiveCounts(folder, false, 1);
+              adjustArchiveCounts(folder, threadUnread, 1);
               returnToFolder();
             }}
             onMove={async (destination) => {
@@ -1820,7 +1823,7 @@ export function ThreadRoute({
                 folder,
               );
               await invalidateMailAccountCache(account.id);
-              adjustMoveCounts(folder, destination, false, 1);
+              adjustMoveCounts(folder, destination, threadUnread, 1);
               returnToFolder();
             }}
             onCollection={async (collection, selected) => {
