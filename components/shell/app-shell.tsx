@@ -41,6 +41,7 @@ import type {
 import { PAGE_SIZE } from "@/lib/mail/list-query";
 import {
   emptyComposeInput,
+  hasAuthoredComposeContent,
   hasAuthoredComposeText,
 } from "@/lib/mail/composer-footer";
 import {
@@ -706,7 +707,7 @@ export function AppShell({
   const sendCompose = useCallback(
     async (input: ComposeInput, files: File[] = []) => {
       if (!input.to.trim()) return "Add a recipient.";
-      if (!hasAuthoredComposeText(input.text) && !files.length) {
+      if (!hasAuthoredComposeText(input.text) && !hasAuthoredComposeContent(input) && !files.length) {
         return "Write a message or attach a file.";
       }
       setRecalled(null);

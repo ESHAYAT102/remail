@@ -357,6 +357,20 @@ export function createResendProvider(
         cc: parseAddressList(input.cc), bcc: parseAddressList(input.bcc), subject: input.subject,
         text: input.text, html: input.html, headers: headers ?? {}, receivedAt: sentAt,
       });
+      if (input.attachments?.length) {
+        await database.insert(hostedAttachments).values(
+          input.attachments.map((file) => ({
+            id: crypto.randomUUID(),
+            messageId: id,
+            filename: file.filename,
+            mimeType: file.mimeType,
+            size: file.size,
+            contentId: null,
+            inline: false,
+            content: file.data,
+          })),
+        );
+      }
       return { id, threadId, sentAt: sentAt.toISOString() };
     },
     async saveDraft() { throw new MailError("Drafts are not available for this account yet."); },
