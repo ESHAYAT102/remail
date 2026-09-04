@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dialog } from "@base-ui/react/dialog";
 import * as stylex from "@stylexjs/stylex";
 import { SenderField } from "@/components/mail/sender-alias-input";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { Dialog } from "@/components/ui/dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Icons } from "@/components/ui/icons";
 import { settingsControlStyle } from "@/components/settings/settings-ui";
