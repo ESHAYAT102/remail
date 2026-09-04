@@ -320,6 +320,7 @@ function ThreadRow({
   density,
   messagePreview,
   onArchive,
+  onDelete,
   onMove,
   onStar,
   canArchive,
@@ -341,6 +342,7 @@ function ThreadRow({
   density: DensityPreference;
   messagePreview: MessagePreviewPreference;
   onArchive: (id: string) => void;
+  onDelete: (id: string, draftId?: string) => void;
   onMove: (id: string, destination: "inbox" | "spam" | "trash") => void;
   onStar: (id: string) => void;
   canArchive: boolean;
@@ -389,6 +391,7 @@ function ThreadRow({
           setHot(false);
         }
       }}
+      suppressHydrationWarning
       {...stylex.props(
         styles.row,
         (showActions || keyboardActive) && styles.rowHot,
@@ -535,6 +538,18 @@ function ThreadRow({
                     <Menu.Label>Archive</Menu.Label>
                   </Menu.Item>
                 ) : null}
+                {canArchive && thread.folder === "archived" ? (
+                  <Menu.Item onClick={() => onMove(thread.id, "inbox")}>
+                    <Menu.Icon><Icons.archived size={16} /></Menu.Icon>
+                    <Menu.Label>Unarchive</Menu.Label>
+                  </Menu.Item>
+                ) : null}
+                {thread.folder === "drafts" ? (
+                  <Menu.Item onClick={() => onDelete(thread.id, thread.draftId)}>
+                    <Menu.Icon><Icons.trash size={16} /></Menu.Icon>
+                    <Menu.Label>Delete</Menu.Label>
+                  </Menu.Item>
+                ) : null}
                 {(thread.folder === "spam" || thread.folder === "trash") ? (
                   <Menu.Item onClick={() => onMove(thread.id, "inbox")}>
                     <Menu.Icon><Icons.inbox size={16} /></Menu.Icon>
@@ -607,6 +622,7 @@ export function ThreadList({
   onUnreadChange,
   onThreadUnreadChange,
   onArchive,
+  onDelete,
   onMove,
   onStar,
   onMore,
@@ -635,6 +651,7 @@ export function ThreadList({
   onUnreadChange?: (folder: string, delta: number) => void;
   onThreadUnreadChange?: (id: string, unread: boolean) => void;
   onArchive?: (folder: string, unread: boolean, direction: 1 | -1) => void;
+  onDelete: (id: string, draftId?: string) => void;
   onMove?: (
     folder: string,
     destination: "inbox" | "spam" | "trash",
@@ -827,6 +844,7 @@ export function ThreadList({
             messagePreview={messagePreview}
             onRead={() => void setThreadUnread(thread, !thread.unread)}
             onArchive={() => void archiveThread(thread)}
+            onDelete={onDelete}
             onMove={(_id, destination) => void moveThread(thread, destination)}
             onStar={() => void setThreadStarred(thread, !thread.favorite)}
             canArchive={account.capabilities.includes("archive")}

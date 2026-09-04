@@ -26,6 +26,7 @@ export const keybindIds = [
   "openThread",
   "toggleSelect",
   "toggleSelectAll",
+  "archive",
   "reply",
   "forward",
   "search",
@@ -58,10 +59,11 @@ export const KEYBIND_ACTIONS: ReadonlyArray<{
   { id: "moveNext", label: "Next conversation", group: "Conversations" },
   { id: "openThread", label: "Open conversation", group: "Conversations" },
   { id: "toggleSelect", label: "Select conversation", group: "Conversations" },
-  { id: "toggleSelectAll", label: "Toggle visible selection", group: "Conversations" },
+  { id: "toggleSelectAll", label: "Select visible conversations", group: "Conversations" },
   { id: "toggleRead", label: "Toggle read / unread", group: "Conversations" },
   { id: "reply", label: "Reply", group: "Conversations" },
   { id: "forward", label: "Forward", group: "Conversations" },
+  { id: "archive", label: "Archive", group: "Conversations" },
 ];
 
 function combo(key: string, mods?: Partial<Omit<KeyCombo, "key">>): KeyCombo {
@@ -90,6 +92,7 @@ export const DEFAULT_KEYBINDS: KeybindMap = {
   toggleSelectAll: [combo("a", { ctrl: true })],
   reply: [combo("r")],
   forward: [combo("f")],
+  archive: [combo("a")],
   search: [combo("/")],
   openSettings: [combo(",", { ctrl: true })],
 };

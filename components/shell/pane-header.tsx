@@ -81,6 +81,7 @@ export function PaneHeader({
         </h1>
       ) : (
         <h1
+          data-route-heading
           {...stylex.props(
             styles.title,
             Boolean(tools) && styles.titleWithTools,

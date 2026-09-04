@@ -83,7 +83,7 @@ export function MailShellLoading() {
             </div>
           </div>
         </div>
-        <div aria-hidden {...stylex.props(styles.pane)}>
+        <div aria-hidden suppressHydrationWarning {...stylex.props(styles.pane)}>
           <MailFolderLoading />
         </div>
       </main>

@@ -132,6 +132,7 @@ export function AppearanceSettings() {
             id="default-sender-alias"
             value={senderAlias}
             domain={domain}
+            raised
             disabled={saving}
             onChange={setSenderAlias}
             onCommit={(value) => {

@@ -23,7 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body>
         <DisableThemeTransitions />
         <TrackInputModality />
-        <a className="skip-link" href="#main">
+        <a className="skip-link" href="#main" suppressHydrationWarning>
           Skip to content
         </a>
         {children}

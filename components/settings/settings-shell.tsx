@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import * as stylex from "@stylexjs/stylex";
 import { useMailShell } from "@/components/shell/app-shell";
 import { Icons } from "@/components/ui/icons";
@@ -132,6 +132,7 @@ const styles = stylex.create({
 
 export function SettingsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { account, registerView } = useMailShell();
   const settingsNavRef = useRef<HTMLElement>(null);
   const activeLinkRef = useRef<HTMLAnchorElement>(null);
@@ -144,6 +145,34 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
       href: pathname,
     });
   }, [pathname, registerView]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.closest("input, textarea, select") ||
+          target.closest("[contenteditable='true'], [contenteditable='']"))
+      ) {
+        return;
+      }
+      const currentIndex = mailSettingsSectionIds.findIndex(
+        (section) => mailSettingsHref(section) === pathname,
+      );
+      if (currentIndex < 0) return;
+      const nextIndex =
+        event.key === "ArrowDown"
+          ? Math.min(currentIndex + 1, mailSettingsSectionIds.length - 1)
+          : Math.max(currentIndex - 1, 0);
+      if (nextIndex === currentIndex) return;
+      event.preventDefault();
+      router.push(mailSettingsHref(mailSettingsSectionIds[nextIndex]));
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [pathname, router]);
 
   useEffect(() => {
     const showActiveLink = () => {

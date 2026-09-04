@@ -42,6 +42,7 @@ const styles = stylex.create({
     "@media (max-width: 640px)": { fontSize: "16px" },
   },
   inputRaised: { paddingInlineStart: 0 },
+  controlRaised: { paddingInlineEnd: 0 },
   domain: {
     display: "flex",
     alignItems: "center",
@@ -146,7 +147,7 @@ export function SenderAliasInput({
 
   return (
     <div {...stylex.props(styles.root)}>
-      <div {...stylex.props(styles.control, raised && settingsControlStyle)}>
+      <div {...stylex.props(styles.control, raised && settingsControlStyle, raised && styles.controlRaised)}>
         <input
           id={id}
           data-border-focus=""

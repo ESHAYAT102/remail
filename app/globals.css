@@ -258,6 +258,14 @@ textarea {
   [data-border-focus]:focus-visible {
     outline: none !important;
   }
+
+  [data-suppress-focus-ring]:focus-visible {
+    outline: none !important;
+  }
+
+  [data-route-heading]:focus-visible {
+    outline: none !important;
+  }
 }
 
 @media (forced-colors: active) {

@@ -252,7 +252,12 @@ export function SettingsPage({
   return (
     <section aria-labelledby="settings-page-title" {...stylex.props(styles.page)}>
       <header {...stylex.props(styles.heading)}>
-        <h1 id="settings-page-title" tabIndex={-1} {...stylex.props(styles.title)}>
+        <h1
+          id="settings-page-title"
+          data-route-heading
+          tabIndex={-1}
+          {...stylex.props(styles.title)}
+        >
           {title}
         </h1>
         <p {...stylex.props(styles.description)}>{description}</p>

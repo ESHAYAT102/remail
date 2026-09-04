@@ -23,6 +23,7 @@ import { ShortcutReferenceDialog } from "@/components/settings/shortcut-referenc
 import { ThreadList } from "@/components/mail/thread-list";
 import { ThreadView, type ReplyMode } from "@/components/mail/thread-view";
 import { PendingSendRow } from "@/components/mail/pending-send";
+import { removeDraft } from "@/lib/mail/draft-client";
 import { ListToolbar } from "@/components/mail/list-toolbar";
 import { ThreadToolbar } from "@/components/mail/thread-toolbar";
 import { MailFolderLoading } from "@/components/mail/loading-state";
@@ -1103,6 +1104,7 @@ export function AppShell({
             onActiveEdgeChange={setActiveTabEdge}
           />
           <div
+            suppressHydrationWarning
             {...stylex.props(
               styles.pane,
               (visibleTabs[0]?.id === activeId ||
@@ -1497,6 +1499,47 @@ function FolderResults({
         }
     : undefined;
 
+  const archiveActiveThread = useCallback(
+    async (threadId: string) => {
+      const thread = threads.find((item) => item.id === threadId);
+      if (!thread) return;
+      if (folder === "archived") {
+        await persistThreadMove(account.id, threadId, "inbox", folder);
+        adjustMoveCounts(folder, "inbox", thread.unread, 1);
+      } else {
+        await persistThreadArchive(account.id, threadId, folder);
+        adjustArchiveCounts(folder, thread.unread, 1);
+      }
+      setThreads((current) => current.filter((item) => item.id !== threadId));
+      onSelectionChange(
+        new Set([...selectedThreadIds].filter((id) => id !== threadId)),
+      );
+      void invalidateMailAccountCache(account.id).catch(() => null);
+    },
+    [
+      account.id,
+      adjustArchiveCounts,
+      adjustMoveCounts,
+      folder,
+      onSelectionChange,
+      selectedThreadIds,
+      threads,
+    ],
+  );
+
+  const deleteDraft = useCallback(
+    async (threadId: string, draftId?: string) => {
+      if (!draftId) return;
+      await removeDraft(account.id, draftId);
+      setThreads((current) => current.filter((item) => item.id !== threadId));
+      onSelectionChange(
+        new Set([...selectedThreadIds].filter((id) => id !== threadId)),
+      );
+      void invalidateMailAccountCache(account.id).catch(() => null);
+    },
+    [account.id, onSelectionChange, selectedThreadIds],
+  );
+
   if (sourcePage !== initialPage) {
     setSourcePage(initialPage);
     setThreads(initialPage.threads);
@@ -1548,6 +1591,7 @@ function FolderResults({
           : undefined);
       if (
         activeThreadId &&
+        !isTyping(event) &&
         (enabledKeybindMatchesEvent(
           event,
           keybinds.reply,
@@ -1557,9 +1601,24 @@ function FolderResults({
             event,
             keybinds.forward,
             preferences.singleKeyShortcuts,
+          ) ||
+          enabledKeybindMatchesEvent(
+            event,
+            keybinds.archive,
+            preferences.singleKeyShortcuts,
           ))
       ) {
         event.preventDefault();
+        if (
+          enabledKeybindMatchesEvent(
+            event,
+            keybinds.archive,
+            preferences.singleKeyShortcuts,
+          )
+        ) {
+          void archiveActiveThread(activeThreadId);
+          return;
+        }
         const mode = enabledKeybindMatchesEvent(
           event,
           keybinds.reply,
@@ -1655,6 +1714,7 @@ function FolderResults({
     onToggleSelectedUnread,
     onSelectionChange,
     openThreadComposer,
+    archiveActiveThread,
     preferences.keybinds,
     preferences.singleKeyShortcuts,
     query,
@@ -1711,6 +1771,7 @@ function FolderResults({
             onUnreadChange={adjustUnreadCounts}
             onThreadUnreadChange={updateThreadViewUnread}
             onArchive={adjustArchiveCounts}
+            onDelete={deleteDraft}
             onMove={adjustMoveCounts}
             onStar={adjustStarredCounts}
             onMore={() => void loadMore()}
@@ -1987,6 +2048,30 @@ export function ThreadRoute({
       if (
         enabledKeybindMatchesEvent(
           event,
+          keybinds.archive,
+          preferences.singleKeyShortcuts,
+        ) &&
+        account.capabilities.includes("archive")
+      ) {
+        event.preventDefault();
+        const archiveRequest = folder === "archived"
+          ? persistThreadMove(account.id, detail.id, "inbox", folder)
+          : persistThreadArchive(account.id, detail.id, folder);
+        void archiveRequest
+          .then(() => invalidateMailAccountCache(account.id))
+          .then(() => {
+            if (folder === "archived") {
+              adjustMoveCounts(folder, "inbox", threadUnread, 1);
+            } else {
+              adjustArchiveCounts(folder, threadUnread, 1);
+            }
+            returnToFolder();
+          });
+        return;
+      }
+      if (
+        enabledKeybindMatchesEvent(
+          event,
           keybinds.toggleRead,
           preferences.singleKeyShortcuts,
         ) &&
@@ -2001,6 +2086,13 @@ export function ThreadRoute({
     return () => window.removeEventListener("keydown", onKey);
   }, [
     account.capabilities,
+    account.id,
+    adjustArchiveCounts,
+    adjustMoveCounts,
+    detail.id,
+    folder,
+    returnToFolder,
+    threadUnread,
     preferences.keybinds,
     preferences.singleKeyShortcuts,
     toggleThreadUnread,

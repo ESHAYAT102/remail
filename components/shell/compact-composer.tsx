@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { IconButton } from "@/components/ui/icon-button";
 import { Icons } from "@/components/ui/icons";
+import { settingsControlStyle } from "@/components/settings/settings-ui";
 import {
   RichTextComposer,
   RichTextEditor,
@@ -71,7 +72,7 @@ const styles = stylex.create({
   row: {
     display: "flex",
     alignItems: "center",
-    gap: space[2],
+    gap: space[3],
     minHeight: 28,
   },
   label: {
@@ -140,12 +141,14 @@ const styles = stylex.create({
     color: colors.text,
     fontFamily: "inherit",
     fontSize: fonts.uiSize,
-    paddingBlock: space[1],
+    paddingBlock: space[2],
+    paddingInline: space[3],
     outline: "none",
     "@media (max-width: 640px)": {
       fontSize: "16px",
     },
   },
+  fieldRaised: { paddingInline: 0 },
   chevron: {
     width: 16,
     height: 16,
@@ -434,7 +437,7 @@ function AddressField({
       <label htmlFor={id} {...stylex.props(styles.label)}>
         {label}
       </label>
-      <div {...stylex.props(styles.chips)}>
+      <div {...stylex.props(styles.chips, settingsControlStyle)}>
         {addresses.map((address) => (
           <span key={address} {...stylex.props(styles.chip)}>
             <span {...stylex.props(styles.chipText)} title={address}>
@@ -452,7 +455,7 @@ function AddressField({
         ))}
         <input
           id={id}
-          {...stylex.props(styles.field, styles.placeholder)}
+          {...stylex.props(styles.field, styles.fieldRaised, styles.placeholder)}
           name={id}
           type="text"
           inputMode="email"
@@ -594,6 +597,7 @@ export function CompactComposer({
           id="reply-from"
           value={draft.from}
           placement="above"
+          raised
           onChange={(from) => editDraft({ from })}
         />
       ) : null}
@@ -644,6 +648,7 @@ export function CompactComposer({
         <RichTextEditor
           placeholder={mode === "forward" ? "Add a message…" : "Write a reply…"}
           autoFocus
+          suppressFocusRing
           autoFocusSelection="rootStart"
           onEscape={discard}
           onSubmit={() => void submit()}
