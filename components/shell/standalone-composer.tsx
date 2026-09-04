@@ -45,7 +45,7 @@ const styles = stylex.create({
     outline: "none",
     overflow: "hidden",
     overscrollBehavior: "contain",
-    zIndex: 40,
+    zIndex: 10001,
     "@media (prefers-reduced-motion: no-preference)": {
       transitionProperty: "opacity, transform, width, height",
       transitionDuration: "180ms",
