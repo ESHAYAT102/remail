@@ -27,6 +27,10 @@ import type {
 } from "@/lib/mail/types";
 import type { SessionUser } from "@/lib/session";
 import { getResend, unwrapResend } from "./client";
+import {
+  stripHtmlReplyHistory,
+  stripPlainTextReplyHistory,
+} from "./reply-content";
 
 type StoredAddress = { name: string; email: string };
 type StoredMessage = typeof hostedMessages.$inferSelect;
@@ -107,9 +111,11 @@ function toMessage(
     bcc: addresses(row.bcc),
     date: row.receivedAt.toISOString(),
     subject: row.subject,
-    snippet: (row.text ?? "").replace(/\s+/g, " ").slice(0, 180),
-    text: row.text ?? undefined,
-    html: row.html ?? undefined,
+    snippet: (stripPlainTextReplyHistory(row.text) ?? "")
+      .replace(/\s+/g, " ")
+      .slice(0, 180),
+    text: stripPlainTextReplyHistory(row.text),
+    html: stripHtmlReplyHistory(row.html),
     attachments: attachments.map((file) => ({
       id: file.id,
       filename: file.filename,
@@ -128,7 +134,9 @@ function toThread(rows: StoredMessage[]): Thread {
     folder: folderFor(latest),
     subject: latest.subject || "(no subject)",
     from: latest.from as StoredAddress,
-    snippet: (latest.text ?? "").replace(/\s+/g, " ").slice(0, 180),
+    snippet: (stripPlainTextReplyHistory(latest.text) ?? "")
+      .replace(/\s+/g, " ")
+      .slice(0, 180),
     date: latest.receivedAt.toISOString(),
     unread: rows.some((row) => row.unread),
     hasAttachment: false,
@@ -350,27 +358,42 @@ export function createResendProvider(
       const id = crypto.randomUUID();
       const threadId = input.threadId ?? id;
       const sentAt = new Date();
-      await database.insert(hostedMessages).values({
-        id, userId: user.id, domainId: owned.id, providerEmailId: result.id,
-        threadId, direction: "outbound", folder: "sent", unread: false,
-        from: { name: user.name, email: sender }, to: parseAddressList(input.to),
-        cc: parseAddressList(input.cc), bcc: parseAddressList(input.bcc), subject: input.subject,
-        text: input.text, html: input.html, headers: headers ?? {}, receivedAt: sentAt,
+      await database.transaction(async (tx) => {
+        if (input.inReplyTo && input.threadId) {
+          // A sent reply belongs only in Sent until another participant
+          // replies. Clear stale Inbox/unread state from the whole thread.
+          await tx
+            .update(hostedMessages)
+            .set({ folder: "sent", unread: false })
+            .where(
+              and(
+                eq(hostedMessages.userId, user.id),
+                eq(hostedMessages.threadId, threadId),
+              ),
+            );
+        }
+        await tx.insert(hostedMessages).values({
+          id, userId: user.id, domainId: owned.id, providerEmailId: result.id,
+          threadId, direction: "outbound", folder: "sent", unread: false,
+          from: { name: user.name, email: sender }, to: parseAddressList(input.to),
+          cc: parseAddressList(input.cc), bcc: parseAddressList(input.bcc), subject: input.subject,
+          text: input.text, html: input.html, headers: headers ?? {}, receivedAt: sentAt,
+        });
+        if (input.attachments?.length) {
+          await tx.insert(hostedAttachments).values(
+            input.attachments.map((file) => ({
+              id: crypto.randomUUID(),
+              messageId: id,
+              filename: file.filename,
+              mimeType: file.mimeType,
+              size: file.size,
+              contentId: null,
+              inline: false,
+              content: file.data,
+            })),
+          );
+        }
       });
-      if (input.attachments?.length) {
-        await database.insert(hostedAttachments).values(
-          input.attachments.map((file) => ({
-            id: crypto.randomUUID(),
-            messageId: id,
-            filename: file.filename,
-            mimeType: file.mimeType,
-            size: file.size,
-            contentId: null,
-            inline: false,
-            content: file.data,
-          })),
-        );
-      }
       return { id, threadId, sentAt: sentAt.toISOString() };
     },
     async saveDraft() { throw new MailError("Drafts are not available for this account yet."); },

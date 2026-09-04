@@ -190,7 +190,7 @@ export function AppearanceSettings() {
         <ToggleSetting
           id="single-key-shortcuts"
           label="Use single-key shortcuts"
-          description="Press / to search, C to compose, W to close the active tab, H/L to switch tabs, J/K or the arrow keys to highlight messages, Space to select, U to toggle read status, Enter to open, R to reply, F to forward, and 1–9 to open sidebar folders. Ctrl/⌘+, opens Settings."
+          description="Press / to search, C to compose, Q to close the active tab, H/L to switch tabs, J/K or the arrow keys to highlight messages, Space to select, U to toggle read status, Enter to open, R to reply, F to forward, and 1–9 to open sidebar folders. Ctrl/⌘+, opens Settings."
           checked={preferences.singleKeyShortcuts}
           disabled={saving}
           onChange={(singleKeyShortcuts) => void save({ singleKeyShortcuts })}

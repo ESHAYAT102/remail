@@ -844,7 +844,7 @@ export function AppShell({
       }
       if (
         preferences.singleKeyShortcuts &&
-        event.key.toLowerCase() === "w" &&
+        event.key.toLowerCase() === "q" &&
         !event.altKey &&
         !event.ctrlKey &&
         !event.metaKey &&

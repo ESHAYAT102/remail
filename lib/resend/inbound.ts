@@ -73,7 +73,9 @@ export async function ingestReceivedEmail(data: ReceivedData) {
     if (threadId !== id) {
       await tx
         .update(hostedMessages)
-        .set({ folder: "inbox" })
+        // A new inbound reply revives the conversation in Inbox/Unread,
+        // including messages that were previously read or archived.
+        .set({ folder: "inbox", unread: true })
         .where(
           and(
             eq(hostedMessages.userId, owner.userId),
