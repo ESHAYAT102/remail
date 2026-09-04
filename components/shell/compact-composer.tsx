@@ -591,6 +591,7 @@ export function CompactComposer({
         <SenderField
           id="reply-from"
           value={draft.from}
+          placement="above"
           onChange={(from) => editDraft({ from })}
         />
       ) : null}

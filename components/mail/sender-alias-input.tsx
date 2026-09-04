@@ -66,6 +66,10 @@ const styles = stylex.create({
     backgroundColor: colors.surface,
     boxShadow: elevation.overlay,
   },
+  popupAbove: {
+    insetBlockStart: "auto",
+    insetBlockEnd: "calc(100% + 6px)",
+  },
   option: {
     display: "flex",
     alignItems: "center",
@@ -112,6 +116,7 @@ export function SenderAliasInput({
   id,
   value,
   domain,
+  placement = "below",
   disabled,
   onChange,
   onCommit,
@@ -119,6 +124,7 @@ export function SenderAliasInput({
   id: string;
   value: string;
   domain: string;
+  placement?: "above" | "below";
   disabled?: boolean;
   onChange: (value: string) => void;
   onCommit?: (value: string) => void;
@@ -186,7 +192,15 @@ export function SenderAliasInput({
         <span aria-hidden="true" {...stylex.props(styles.domain)}>@{domain}</span>
       </div>
       {open ? (
-        <div id={listId} role="listbox" aria-label="Suggested sender aliases" {...stylex.props(styles.popup)}>
+        <div
+          id={listId}
+          role="listbox"
+          aria-label="Suggested sender aliases"
+          {...stylex.props(
+            styles.popup,
+            placement === "above" && styles.popupAbove,
+          )}
+        >
           {suggestions.length ? suggestions.map((alias, index) => (
             <button
               key={alias}
@@ -215,10 +229,12 @@ export function SenderAliasInput({
 export function SenderField({
   id,
   value,
+  placement,
   onChange,
 }: {
   id: string;
   value: string;
+  placement?: "above" | "below";
   onChange: (value: string) => void;
 }) {
   const separator = value.lastIndexOf("@");
@@ -234,6 +250,7 @@ export function SenderField({
         id={id}
         value={localPart}
         domain={domain}
+        placement={placement}
         onChange={(alias) => onChange(`${alias}@${domain}`)}
       />
     </div>
