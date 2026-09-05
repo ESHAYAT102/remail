@@ -690,6 +690,19 @@ export function StandaloneComposer({
     return () => window.clearTimeout(timer);
   }, [draft, files, open, saveNow, supportsDrafts]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "f" || (!event.ctrlKey && !event.metaKey)) {
+        return;
+      }
+      event.preventDefault();
+      setExpanded((current) => !current);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
+
   const discard = async () => {
     if (dirty) {
       setDiscardOpen(true);
@@ -863,6 +876,13 @@ export function StandaloneComposer({
                   expanded
                   tabIndex={4}
                   suppressFocusRing
+                  onTab={() => {
+                    document
+                      .querySelector<HTMLButtonElement>(
+                        "[data-compose-attachment], [data-compose-toolbar] button:not(:disabled)",
+                      )
+                      ?.focus();
+                  }}
                   onSubmit={() => void submit()}
                 />
               </div>
@@ -919,12 +939,13 @@ export function StandaloneComposer({
                 />
                 <IconButton
                   type="button"
+                  data-compose-attachment
                   aria-label="Attach files"
                   onClick={() => fileRef.current?.click()}
                 >
                   <Icons.paperclip size={16} />
                 </IconButton>
-                <RichTextToolbar />
+                <RichTextToolbar composeToolbar />
                 {supportsDrafts ? (
                   <span
                     role="status"

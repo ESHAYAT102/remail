@@ -189,7 +189,7 @@ const formats: Array<{
   },
 ];
 
-export function RichTextToolbar() {
+export function RichTextToolbar({ composeToolbar = false }: { composeToolbar?: boolean }) {
   const [editor] = useLexicalComposerContext();
   const [active, setActive] = useState<Partial<Record<TextFormatType, boolean>>>({});
 
@@ -214,7 +214,12 @@ export function RichTextToolbar() {
   );
 
   return (
-    <div role="group" aria-label="Text formatting" {...stylex.props(styles.toolbar)}>
+    <div
+      role="group"
+      aria-label="Text formatting"
+      data-compose-toolbar={composeToolbar || undefined}
+      {...stylex.props(styles.toolbar)}
+    >
       {formats.map(({ format, icon, label, shortcut, ariaShortcut }) => {
         const FormatIcon = Icons[icon];
         const styled = stylex.props(active[format] && styles.toolbarButtonOn);
@@ -277,6 +282,7 @@ export function RichTextEditor({
   tabIndex,
   onEscape,
   onSubmit,
+  onTab,
 }: {
   placeholder: string;
   expanded?: boolean;
@@ -286,6 +292,7 @@ export function RichTextEditor({
   tabIndex?: number;
   onEscape?: () => void;
   onSubmit?: () => void;
+  onTab?: () => void;
 }) {
   return (
     <div
@@ -304,6 +311,11 @@ export function RichTextEditor({
               data-suppress-focus-ring={suppressFocusRing || undefined}
               {...stylex.props(styles.editor, expanded && styles.editorExpanded)}
               onKeyDown={(event) => {
+                if (event.key === "Tab" && !event.shiftKey && onTab) {
+                  event.preventDefault();
+                  onTab();
+                  return;
+                }
                 if (event.key === "Escape" && onEscape) {
                   event.stopPropagation();
                   onEscape();
