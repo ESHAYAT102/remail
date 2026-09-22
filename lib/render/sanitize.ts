@@ -247,7 +247,7 @@ function emailChrome(allowRemoteImages: boolean, theme: ThemePreference) {
         -webkit-text-size-adjust: 100%;
       }
       a {
-        color: oklch(0.46 0.18 45);
+        color: oklch(0.555 0.250 297);
         text-underline-position: from-font;
         text-decoration-thickness: from-font;
       }
@@ -264,7 +264,7 @@ function emailChrome(allowRemoteImages: boolean, theme: ThemePreference) {
       .redakt-composer p { margin: 0; }
       @media (prefers-color-scheme: dark) {
         body { color: oklch(0.96 0.001 240); }
-        a { color: oklch(0.76 0.18 45); }
+        a { color: oklch(0.787 0.119 305); }
         blockquote {
           color: oklch(0.82 0.004 240);
           border-inline-start-color: oklch(0.42 0.005 240);
