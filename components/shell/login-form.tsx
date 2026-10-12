@@ -122,6 +122,7 @@ export function LoginForm({
   const [password, setPassword] = useState(initialLogin.password);
   const [error, setError] = useState(initialError ?? "");
   const [accountReady, setAccountReady] = useState(!addingAccount);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!addingAccount) return;
@@ -157,25 +158,33 @@ export function LoginForm({
       {...stylex.props(styles.form)}
       onSubmit={async (event) => {
         event.preventDefault();
+        if (submitting) return;
+        setSubmitting(true);
         setError("");
-        const demo = await fetch("/api/auth/demo", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        if (demo.ok) {
-          router.replace("/mail/inbox");
+        try {
+          const demo = await fetch("/api/auth/demo", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email, password }),
+          });
+          if (demo.ok) {
+            router.replace("/mail/inbox");
+            router.refresh();
+            return;
+          }
+          if (!accountReady) return;
+          const result = await authClient.signIn.email({ email, password });
+          if (result.error) {
+            setError("Unable to sign in. Check email and password, then try again.");
+            return;
+          }
+          router.replace("/mail");
           router.refresh();
-          return;
+        } catch {
+          setError("Unable to sign in. Check your connection, then try again.");
+        } finally {
+          setSubmitting(false);
         }
-        if (!accountReady) return;
-        const result = await authClient.signIn.email({ email, password });
-        if (result.error) {
-          setError("Unable to sign in. Check email and password, then try again.");
-          return;
-        }
-        router.replace("/mail");
-        router.refresh();
       }}
     >
       <div {...stylex.props(styles.fields)}>
@@ -215,10 +224,13 @@ export function LoginForm({
       <div {...stylex.props(styles.actions)}>
         <Button
           type="submit"
-          disabled={!accountReady}
+          disabled={!accountReady || submitting}
+          aria-busy={submitting || undefined}
           className={stylex.props(styles.submit).className}
         >
-          {addingAccount
+          {submitting
+            ? "Opening inbox…"
+            : addingAccount
             ? accountReady
               ? "Add account"
               : "Preparing account switcher…"
