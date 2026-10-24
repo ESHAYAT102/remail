@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import {
   hostedAttachments,
@@ -28,12 +28,25 @@ import type {
 import type { SessionUser } from "@/lib/session";
 import { getResend, unwrapResend } from "./client";
 import {
+  collectionCountsQuery,
+  folderCountsQuery,
+  threadAttachmentsQuery,
+  threadListQuery,
+} from "./queries";
+import {
   stripHtmlReplyHistory,
   stripPlainTextReplyHistory,
 } from "./reply-content";
 
 type StoredAddress = { name: string; email: string };
-type StoredMessage = typeof hostedMessages.$inferSelect;
+type StoredMessage = Pick<
+  typeof hostedMessages.$inferSelect,
+  "id" | "threadId" | "folder" | "subject" | "from" | "to" | "cc" | "bcc" |
+  "receivedAt" | "text" | "html" | "unread"
+>;
+type StoredAttachment = Omit<typeof hostedAttachments.$inferSelect, "content"> & {
+  content: string | null;
+};
 
 function addresses(value: unknown): StoredAddress[] {
   return Array.isArray(value) ? (value as StoredAddress[]) : [];
@@ -100,7 +113,7 @@ function folderFor(row: StoredMessage): MailFolderId {
 
 function toMessage(
   row: StoredMessage,
-  attachments: Array<typeof hostedAttachments.$inferSelect>,
+  attachments: StoredAttachment[],
 ): Message {
   return {
     id: row.id,
@@ -123,7 +136,7 @@ function toMessage(
       size: file.size,
       contentId: file.contentId ?? undefined,
       inline: file.inline,
-      content: row.folder === "drafts" ? file.content : undefined,
+      content: row.folder === "drafts" ? file.content ?? undefined : undefined,
     })),
   };
 }
@@ -157,39 +170,12 @@ export function createResendProvider(
       return { email: mailAccount.email, name: mailAccount.displayName, connector: "hosted" };
     },
     async listThreads(folder, query = {}) {
-      const rows = await database
-        .select()
-        .from(hostedMessages)
-        .where(eq(hostedMessages.userId, user.id))
-        .orderBy(asc(hostedMessages.receivedAt));
-      const wanted = folder === "smart" ? "inbox" : folder;
-      const grouped = new Map<string, StoredMessage[]>();
-      for (const row of rows) {
-        if (row.folder !== wanted) continue;
-        if ((folder === "smart" || query.unread) && !row.unread) continue;
-        if (query.q && !`${row.subject} ${row.text ?? ""}`.toLowerCase().includes(query.q.toLowerCase())) continue;
-        const group = grouped.get(row.threadId) ?? [];
-        group.push(row);
-        grouped.set(row.threadId, group);
-      }
-      let threads = [...grouped.values()].map(toThread);
-      const direction = query.order === "asc" ? 1 : -1;
-      threads.sort((left, right) => {
-        const key = query.sort === "from" ? "from" : query.sort === "subject" ? "subject" : "date";
-        const a = key === "from" ? left.from.email : left[key];
-        const b = key === "from" ? right.from.email : right[key];
-        return a.localeCompare(b) * direction;
-      });
-      const total = threads.length;
+      const result = await database.execute<{ total: number; unread: number; threads: Thread[] }>(
+        threadListQuery(user.id, folder, query),
+      );
+      const page = result.rows[0];
       const offset = Math.max(0, query.offset ?? 0);
-      const limit = Math.min(50, Math.max(1, query.limit ?? 30));
-      threads = threads.slice(offset, offset + limit);
-      return {
-        threads,
-        total,
-        unread: [...grouped.values()].filter((group) => group.some((row) => row.unread)).length,
-        hasMore: offset + threads.length < total,
-      };
+      return { ...page, hasMore: offset + page.threads.length < page.total };
     },
     async getThread(id) {
       const rows = await database
@@ -198,10 +184,10 @@ export function createResendProvider(
         .where(and(eq(hostedMessages.userId, user.id), eq(hostedMessages.threadId, id)))
         .orderBy(asc(hostedMessages.receivedAt));
       if (!rows.length) return null;
-      const files = await database
-        .select()
-        .from(hostedAttachments)
-        .where(inArray(hostedAttachments.messageId, rows.map((row) => row.id)));
+      // Draft composers need their saved bytes; readers download on demand.
+      const { rows: files } = await database.execute<StoredAttachment>(
+        threadAttachmentsQuery(user.id, rows.map((row) => row.id)),
+      );
       return {
         ...toThread(rows),
         hasAttachment: files.length > 0,
@@ -211,42 +197,17 @@ export function createResendProvider(
       };
     },
     async getFolderCounts() {
-      const rows = await database.select().from(hostedMessages).where(eq(hostedMessages.userId, user.id));
-      const empty = { inbox: 0, smart: 0, starred: 0, sent: 0, drafts: 0, spam: 0, trash: 0, archived: 0 };
-      const unreadThreads = new Map<keyof typeof empty, Set<string>>();
+      const { rows } = await database.execute<{ folder: string; unread: number }>(folderCountsQuery(user.id));
+      const counts = { inbox: 0, smart: 0, starred: 0, sent: 0, drafts: 0, spam: 0, trash: 0, archived: 0 };
       for (const row of rows) {
-        if (!row.unread || !(row.folder in empty)) continue;
-        const folder = row.folder as keyof typeof empty;
-        const threads = unreadThreads.get(folder) ?? new Set<string>();
-        threads.add(row.threadId);
-        unreadThreads.set(folder, threads);
+        if (Object.hasOwn(counts, row.folder)) counts[row.folder as keyof typeof counts] = row.unread;
       }
-      for (const [folder, threads] of unreadThreads) empty[folder] = threads.size;
-      empty.smart = empty.inbox;
-      return empty;
+      counts.smart = counts.inbox;
+      return counts;
     },
     async listCollections() {
-      const [folders, rows] = await Promise.all([
-        database
-          .select()
-          .from(hostedCollections)
-          .where(eq(hostedCollections.userId, user.id))
-          .orderBy(asc(hostedCollections.name)),
-        database
-          .select()
-          .from(hostedMessages)
-          .where(eq(hostedMessages.userId, user.id)),
-      ]);
-      return folders.map((folder) => {
-        const messages = rows.filter((row) => row.folder === `collection:${folder.id}`);
-        return {
-          id: folder.id,
-          name: folder.name,
-          kind: "folder" as const,
-          total: new Set(messages.map((row) => row.threadId)).size,
-          unread: new Set(messages.filter((row) => row.unread).map((row) => row.threadId)).size,
-        };
-      });
+      const { rows } = await database.execute<{ id: string; name: string; total: number; unread: number }>(collectionCountsQuery(user.id));
+      return rows.map((row) => ({ ...row, kind: "folder" as const }));
     },
     async createCollection(name) {
       const existing = await database
@@ -313,7 +274,7 @@ export function createResendProvider(
         .select({ file: hostedAttachments, owner: hostedMessages.userId })
         .from(hostedAttachments)
         .innerJoin(hostedMessages, eq(hostedAttachments.messageId, hostedMessages.id))
-        .where(eq(hostedAttachments.id, id));
+        .where(and(eq(hostedAttachments.id, id), eq(hostedMessages.userId, user.id)));
       if (!file || file.owner !== user.id) return null;
       return { bytes: Buffer.from(file.file.content, "base64"), mimeType: file.file.mimeType, filename: file.file.filename };
     },
@@ -340,7 +301,7 @@ export function createResendProvider(
         throw new MailError("Enter a valid sender address.");
       }
       const source = input.inReplyTo
-        ? (await database.select().from(hostedMessages).where(and(eq(hostedMessages.userId, user.id), eq(hostedMessages.id, input.inReplyTo))))[0]
+        ? (await database.select({ messageId: hostedMessages.messageId, headers: hostedMessages.headers }).from(hostedMessages).where(and(eq(hostedMessages.userId, user.id), eq(hostedMessages.id, input.inReplyTo))))[0]
         : undefined;
       const headers = source?.messageId
         ? { "In-Reply-To": source.messageId, References: [String(source.headers && (source.headers as Record<string, string>).references || ""), source.messageId].filter(Boolean).join(" ") }
@@ -418,7 +379,7 @@ export function createResendProvider(
       const existing = input.id
         ? (
             await database
-              .select()
+              .select({ id: hostedMessages.id, threadId: hostedMessages.threadId })
               .from(hostedMessages)
               .where(
                 and(

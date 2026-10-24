@@ -41,7 +41,16 @@ export async function ingestReceivedEmail(data: ReceivedData) {
   const remote = unwrapResend(await resend.emails.receiving.get(data.email_id));
   const parentIds = referencedMessageIds(remote.headers);
   const candidates = await database
-    .select()
+    .select({
+      threadId: hostedMessages.threadId,
+      messageId: hostedMessages.messageId,
+      subject: hostedMessages.subject,
+      from: hostedMessages.from,
+      to: hostedMessages.to,
+      cc: hostedMessages.cc,
+      bcc: hostedMessages.bcc,
+      replyTo: hostedMessages.replyTo,
+    })
     .from(hostedMessages)
     .where(eq(hostedMessages.userId, owner.userId))
     .orderBy(desc(hostedMessages.receivedAt));

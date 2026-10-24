@@ -37,6 +37,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
     "@railway/cli": "5.47.1",
     "@stylexjs/babel-plugin": "^0.19.0",
     "@stylexjs/eslint-plugin": "^0.19.0",
